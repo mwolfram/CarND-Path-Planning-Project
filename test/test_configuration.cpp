@@ -5,7 +5,7 @@
 
 TEST_CASE( "Configuration is loaded", "[configuration]" ) {
 
-    Configuration configuration("configuration/default.ini");
+    Configuration configuration("configuration/test.ini");
     configuration.read();
 
 }
