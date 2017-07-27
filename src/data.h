@@ -26,7 +26,7 @@ struct Car {
     double car_s_;
     double car_d_;
     double car_yaw_;
-    double car_speed_;
+    double car_speed_mph_;
 };
 
 struct State {

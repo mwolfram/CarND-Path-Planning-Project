@@ -92,7 +92,7 @@ int main() {
                     state.self_.car_s_ = j[1]["s"];
                     state.self_.car_d_ = j[1]["d"];
                     state.self_.car_yaw_ = j[1]["yaw"];
-                    state.self_.car_speed_ = j[1]["speed"];
+                    state.self_.car_speed_mph_ = j[1]["speed"];
 
                     // Previous path data given to the Planner
                     auto previous_path_x = j[1]["previous_path_x"];
@@ -119,7 +119,7 @@ int main() {
                         other.car_s_ = other_car_values[3];
                         other.car_d_ = other_car_values[4];
                         other.car_yaw_ = other_car_values[5];
-                        other.car_speed_ = other_car_values[6];
+                        other.car_speed_mph_ = other_car_values[6];
                         state.others_.push_back(other);
                     }
 

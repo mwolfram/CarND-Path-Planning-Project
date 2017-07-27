@@ -16,7 +16,8 @@ set(main-sources ${sources} src/main.cpp)
 #set(debug-sources ${sources} debug/debug.cpp)
 set(test-sources ${sources} test/test_main.cpp
     test/test_factorial.cpp
-    test/test_configuration.cpp)
+    test/test_configuration.cpp
+    test/test_toolkit.cpp)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 
