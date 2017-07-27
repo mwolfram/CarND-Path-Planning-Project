@@ -125,10 +125,11 @@ namespace toolkit {
     }
 
     // Transform from Frenet s,d coordinates to Cartesian x,y
-    vector<double> toXY(double s, double d, vector<double> maps_s, const Waypoints& waypoints) {
+    vector<double> toXY(double s, double d, const Waypoints& waypoints) {
 
         const vector<double>& maps_x = waypoints.map_waypoints_x_;
         const vector<double>& maps_y = waypoints.map_waypoints_y_;
+        const vector<double>& maps_s = waypoints.map_waypoints_s_;
 
         int prev_wp = -1;
 
@@ -153,6 +154,16 @@ namespace toolkit {
 
         return {x,y};
 
+    }
+
+    // transform a point to car coordinate system
+    void toCarFrame(double& ptx, double& pty, const double& refx, const double& refy, const double& refpsi) {
+        double deltaX = ptx - refx;
+        double deltaY = pty - refy;
+        double cosdiff = cos(0-refpsi);
+        double sindiff = sin(0-refpsi);
+        ptx = (deltaX * cosdiff - deltaY * sindiff);
+        pty = (deltaX * sindiff + deltaY * cosdiff);
     }
 
     /*
