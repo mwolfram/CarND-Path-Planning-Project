@@ -21,7 +21,7 @@ namespace {
     void getNextWaypoints(const Waypoints& waypoints, const State& state, const unsigned int n, Waypoints& waypoints_subset) {
         double next_x = state.self_.car_x_;
         double next_y = state.self_.car_y_;
-        double next_yaw = state.self_.car_yaw_;
+        double next_yaw = toolkit::deg2rad(state.self_.car_yaw_);
 
         for (int i = 0; i < n; i++) {
             int index = toolkit::getNextWaypoint(next_x, next_y, next_yaw, waypoints);
