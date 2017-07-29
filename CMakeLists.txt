@@ -14,7 +14,7 @@ set(sources
     )
 
 set(main-sources ${sources} src/main.cpp)
-#set(debug-sources ${sources} debug/debug.cpp)
+set(debug-sources ${sources} debug/debug_main.cpp)
 set(test-sources ${sources} test/test_main.cpp
     test/test_factorial.cpp
     test/test_configuration.cpp
@@ -35,8 +35,8 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 add_executable(path_planning ${main-sources})
 target_link_libraries(path_planning z ssl uv uWS)
 
-#add_executable(path_planning_debug ${debug-sources})
-#target_link_libraries(path_planning_debug z ssl uv uWS)
+add_executable(path_planning_debug ${debug-sources})
+target_link_libraries(path_planning_debug z ssl uv uWS)
 
 add_executable(path_planning_test ${test-sources})
 target_link_libraries(path_planning_test z ssl uv uWS)

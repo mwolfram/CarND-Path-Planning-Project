@@ -4,6 +4,7 @@
 #include <vector>
 
 class Waypoint;
+class Waypoints;
 class State;
 class Command;
 
@@ -14,7 +15,7 @@ public:
     Planner(){}
     ~Planner(){}
 
-    void plan(const std::vector<Waypoint> &waypoints, const State &state, Command &command);
+    void plan(const Waypoints &waypoints, const State &state, Command &command);
 
 };
 

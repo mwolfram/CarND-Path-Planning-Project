@@ -5,6 +5,8 @@ namespace svg {
     class Document;
 }
 
+class Car;
+
 class Waypoint {
 
 public:
@@ -17,8 +19,6 @@ public:
     double getS() const {return s_;}
     double getDX() const {return dx_;}
     double getDY() const {return dy_;}
-
-    static void getNextWaypoints(const Waypoints& waypoints, const State& state, const unsigned int n, Waypoints& waypoints_subset);
 
 private:
     const double x_;
@@ -36,20 +36,28 @@ public:
     virtual ~Waypoints(){}
     Waypoints(const Waypoints& other);
 
+    // get
     const std::vector<Waypoint>& getWaypoints() const {return waypoints_;}
 
-    static void readWaypoints(Waypoints& waypoints);
-    static void plotWaypoints(const Waypoints& waypoints);
-    static void transformWaypoints(std::vector<Waypoint> waypoints, const State& state);
-    static void getSubsetOfWaypoints(const Waypoints& waypoints, int start_index, int amount, Waypoints& waypoints_subset);
-    static void getWaypointsPositionAndDirection(const Waypoints& waypoints, double& ref_x, double& ref_y, double& ref_yaw);
-    static void interpolateWaypoints(const Waypoints& waypoints, int amount, Waypoints& interpolated_waypoints);
-    static void plotWaypoints(const Waypoints& waypoints, svg::Document& document);
-    static int getClosestWaypoint(double x, double y, const Waypoints& waypoints);
-    static int getNextWaypoint(double x, double y, double theta, const Waypoints& waypoints);
+    // add
+    void add(const Waypoint& waypoint) {waypoints_.push_back(waypoint);}
+    void readFromFile();
+
+    // manipulate
+    void transformToCarFrame(const Car& car, Waypoints& transformed_waypoints) const;
+    int getClosestWaypointIndex(const double& x, const double& y) const;
+    int getNextWaypointIndex(const double& self_x, const double& self_y, const double& self_yaw_rad) const;
+    void getNextWaypoints(const Car& car, const unsigned int &amount, Waypoints& subset) const;
+    void getSubset(const unsigned int &start_index, const unsigned int& amount, Waypoints& subset) const;
+    void getApproximateOriginAndDirection(double& ref_x, double& ref_y, double& ref_yaw) const;
+    void interpolate(const unsigned int &amount, Waypoints& interpolated_waypoints);
+
+    // plot
+    void plotWaypoints(svg::Document& document) const;
 
 private:
     std::vector<Waypoint> waypoints_;
+    double max_s_;
 
 };
 

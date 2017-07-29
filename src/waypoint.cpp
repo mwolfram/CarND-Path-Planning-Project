@@ -1,6 +1,13 @@
-#include "waypoint.h"
 #include <vector>
+#include <limits>
 
+#include "waypoint.h"
+#include "data.h"
+#include "toolkit.hpp"
+
+/**
+ * Single Waypoint
+ */
 Waypoint::Waypoint(const double& x, const double& y, const double& s, const double& dx, const double& dy):
     x_(x),
     y_(y),
@@ -19,17 +26,26 @@ Waypoint::Waypoint(const Waypoint &other):
 {
 }
 
-void Waypoints::readWaypoints(Waypoints &waypoints) {
-    // Waypoint map to read from
-    string map_file_ = "data/highway_map.csv";
-    // The max s value before wrapping around the track back to 0
-    double max_s = 6945.554; // TODO, however, this never happens
+/**
+ * Multiple Waypoints
+ */
+Waypoints::Waypoints(const Waypoints &other):
+    waypoints_(other.waypoints_),
+    max_s_(other.max_s_)
+{
+}
 
-    ifstream in_map_(map_file_.c_str(), ifstream::in);
+void Waypoints::readFromFile() {
+    // Waypoint map to read from
+    string map_file = "data/highway_map.csv";
+    // The max s value before wrapping around the track back to 0
+    max_s_ = 6945.554;
+
+    std::ifstream in_map(map_file.c_str(), std::ifstream::in);
 
     string line;
-    while (getline(in_map_, line)) {
-        istringstream iss(line);
+    while (getline(in_map, line)) {
+        std::istringstream iss(line);
         double x;
         double y;
         float s;
@@ -42,91 +58,86 @@ void Waypoints::readWaypoints(Waypoints &waypoints) {
         iss >> d_y;
 
         Waypoint waypoint(x, y, s, d_x, d_y);
-        waypoints.push_back(waypoint);
+        waypoints_.push_back(waypoint);
     }
 }
 
-void Waypoints::transformWaypoints(std::vector<Waypoint> waypoints, const State& state) {
-    for (unsigned int i = 0; i < waypoints.map_waypoints_x_.size(); i++) {
-        toCarFrame(waypoints.map_waypoints_x_[i],
-                   waypoints.map_waypoints_y_[i],
-                   state.self_.car_x_, state.self_.car_y_, state.self_.car_yaw_rad_);
+void Waypoints::transformToCarFrame(const Car& self, Waypoints &transformed_waypoints) const {
+    for (auto it = waypoints_.begin(); it != waypoints_.end(); it++) {
+        double wp_x = it->getX();
+        double wp_y = it->getY();
+        transform::toCarFrame(wp_x, wp_y, self.car_x_, self.car_y_, self.car_yaw_rad_);
+        transformed_waypoints.add(Waypoint(wp_x, wp_y, it->getS(), it->getDX(), it->getY())); // TODO check if it's ok to take these values from previous waypoint or if we have to transform them too
     }
 }
 
-void Waypoints::getSubsetOfWaypoints(const Waypoints& waypoints, int start_index, int amount, Waypoints& waypoints_subset) {
-    for (int i = start_index; i < start_index + amount; ++i) {
-        waypoints_subset.map_waypoints_x_.push_back(waypoints.map_waypoints_x_[i]);
-        waypoints_subset.map_waypoints_y_.push_back(waypoints.map_waypoints_y_[i]);
-        waypoints_subset.map_waypoints_s_.push_back(waypoints.map_waypoints_s_[i]);
-        waypoints_subset.map_waypoints_dx_.push_back(waypoints.map_waypoints_dx_[i]);
-        waypoints_subset.map_waypoints_dy_.push_back(waypoints.map_waypoints_dy_[i]);
-    }
-}
+void Waypoints::getApproximateOriginAndDirection(double& ref_x, double& ref_y, double& ref_yaw) const {
+    assert(waypoints_.size() > 1);
 
-void Waypoints::getWaypointsPositionAndDirection(const Waypoints& waypoints, double& ref_x, double& ref_y, double& ref_yaw) {
-    ref_x = waypoints.map_waypoints_x_[0];
-    ref_y = waypoints.map_waypoints_y_[0];
+    int origin_index = 0;
+    int target_index = 1; // TODO or use the last waypoint here?
 
-    double ref_x2 = waypoints.map_waypoints_x_[1]; // or use the last one here?
-    double ref_y2 = waypoints.map_waypoints_y_[1];
+    ref_x = waypoints_[origin_index].getX();
+    ref_y = waypoints_[origin_index].getY();
+
+    double ref_x2 = waypoints_[target_index].getX();
+    double ref_y2 = waypoints_[target_index].getY();
 
     ref_yaw = atan2( (ref_y2-ref_y),(ref_x2-ref_x) );
 }
 
-void Waypoints::interpolateWaypoints(const Waypoints& waypoints, int amount, Waypoints& interpolated_waypoints) {
-    // turn the waypoints so that we get a sorted X
+void Waypoints::interpolate(const unsigned int& amount, Waypoints& interpolated_waypoints) {
+
+    // determine the origin and the direction of the set of waypoints
     double ref_x, ref_y, ref_yaw;
-    getWaypointsPositionAndDirection(waypoints, ref_x, ref_y, ref_yaw);
+    getApproximateOriginAndDirection(ref_x, ref_y, ref_yaw);
+    Car reference_position;
+    reference_position.car_x_ = ref_x;
+    reference_position.car_y_ = ref_y;
+    reference_position.car_yaw_rad_ = ref_yaw;
 
-    State state;
-    state.self_.car_x_ = ref_x;
-    state.self_.car_y_ = ref_y;
-    state.self_.car_yaw_rad_ = ref_yaw;
-
-    // TODO copy
+    // transform the waypoints to that frame to make sure that the X values are sorted
     Waypoints transformed_waypoints;
-    for (int i = 0; i < waypoints.map_waypoints_x_.size(); ++i) {
-        transformed_waypoints.map_waypoints_x_.push_back(waypoints.map_waypoints_x_[i]);
-        transformed_waypoints.map_waypoints_y_.push_back(waypoints.map_waypoints_y_[i]);
-        transformed_waypoints.map_waypoints_s_.push_back(waypoints.map_waypoints_s_[i]);
-        transformed_waypoints.map_waypoints_dx_.push_back(waypoints.map_waypoints_dx_[i]);
-        transformed_waypoints.map_waypoints_dy_.push_back(waypoints.map_waypoints_dy_[i]);
-    }
+    transformToCarFrame(reference_position, transformed_waypoints);
 
-    toolkit::transformWaypoints(transformed_waypoints, state);
-
+    // fit a spline to the set of interpolated waypoints
     tk::spline spline;
-    spline.set_points(transformed_waypoints.map_waypoints_x_, transformed_waypoints.map_waypoints_y_);
+    std::vector<double> x_coordinates;
+    std::vector<double> y_coordinates;
+    for (auto it = transformed_waypoints.getWaypoints().begin(); it != transformed_waypoints.getWaypoints().end(); it++) {
+        x_coordinates.push_back(it->getX());
+        y_coordinates.push_back(it->getY());
+    }
+    spline.set_points(x_coordinates, y_coordinates);
 
     // sample interpolated waypoints from waypoints
-    double xrange = transformed_waypoints.map_waypoints_x_[2] - transformed_waypoints.map_waypoints_x_[0];
-    double xincrement = xrange / amount;
-    double curx = transformed_waypoints.map_waypoints_x_[0];
+    double first_x = transformed_waypoints.getWaypoints()[0].getX();
+    double last_x = transformed_waypoints.getWaypoints()[transformed_waypoints.getWaypoints().size()].getX();
+    double range_x = last_x - first_x;
+    double increment_x = range_x / amount;
 
-    double srange = transformed_waypoints.map_waypoints_s_[2] - transformed_waypoints.map_waypoints_s_[0];
-    double sincrement = srange / amount;
-    double curs = transformed_waypoints.map_waypoints_s_[0];
-    for (int i = 0; i < amount; i++) {
-        interpolated_waypoints.map_waypoints_x_.push_back(curx);
-        interpolated_waypoints.map_waypoints_y_.push_back(spline(curx));
-        interpolated_waypoints.map_waypoints_s_.push_back(curs);
-        interpolated_waypoints.map_waypoints_dx_.push_back(0.0);
-        interpolated_waypoints.map_waypoints_dy_.push_back(0.0);
+    double first_s = transformed_waypoints.getWaypoints()[0].getS();
+    double last_s = transformed_waypoints.getWaypoints()[transformed_waypoints.getWaypoints().size()].getS();
+    double range_s = last_s - first_s;
+    double increment_s = range_s / amount;
 
-        curx += xincrement;
-        curs += sincrement;
+    double current_x = first_x;
+    double current_s = first_s;
+    for (unsigned int i = 0; i < amount; i++) {
+        interpolated_waypoints.waypoints_.push_back(Waypoint(current_x, spline(current_x), current_s, 0.0, 0.0)); // TODO ok that we leave dx dy empty?
+        current_x += increment_x;
+        current_s += increment_s;
     }
 }
 
-void Waypoints::plotWaypoints(const Waypoints& waypoints, svg::Document& document) {
+void Waypoints::plotWaypoints(svg::Document& document) const {
 
     double pointSize = 10.0;
 
-    for (int i = 0; i < waypoints.map_waypoints_x_.size(); i++) {
+    for (auto it = waypoints_.begin(); it != waypoints_.end(); it++) {
 
-        double x = waypoints.map_waypoints_x_[i];
-        double y = waypoints.map_waypoints_y_[i];
+        double x = it->getX();
+        double y = it->getY();
 
         svg::Circle circle(svg::Point(x, y),
                            pointSize,
@@ -136,74 +147,53 @@ void Waypoints::plotWaypoints(const Waypoints& waypoints, svg::Document& documen
     }
 }
 
-int Waypoints::getClosestWaypoint(double x, double y, const Waypoints& waypoints) {
+void Waypoints::getSubset(const unsigned int& start_index, const unsigned int &amount, Waypoints& subset) const {
+    for (int i = start_index; i < start_index + amount; ++i) {
+        subset.waypoints_.push_back(waypoints_[i]);
+    }
+}
 
-    const vector<double>& maps_x = waypoints.map_waypoints_x_;
-    const vector<double>& maps_y = waypoints.map_waypoints_y_;
+int Waypoints::getClosestWaypointIndex(const double& x, const double& y) const {
 
-    double closestLen = 100000; //large number
-    int closestWaypoint = 0;
+    double minimumDistance = std::numeric_limits<double>::max();
+    int closestWaypointIndex = 0;
 
-    for(int i = 0; i < maps_x.size(); i++)
-    {
-        double map_x = maps_x[i];
-        double map_y = maps_y[i];
-        double dist = distance(x,y,map_x,map_y);
-        if(dist < closestLen)
-        {
-            closestLen = dist;
-            closestWaypoint = i;
+    for(auto i = 0; i < waypoints_.size(); i++) {
+        double wp_x = waypoints_[i].getX();
+        double wp_y = waypoints_[i].getY();
+
+        double distance = toolkit::distance(x, y, wp_x, wp_y);
+        if(distance < minimumDistance) {
+            minimumDistance = distance;
+            closestWaypointIndex = i;
         }
-
     }
 
-    return closestWaypoint;
+    return closestWaypointIndex;
 
 }
 
-int Waypoints::getNextWaypoint(double x, double y, double theta, const Waypoints& waypoints) {
+int Waypoints::getNextWaypointIndex(const double& self_x, const double& self_y, const double& self_yaw_rad) const {
 
-    const vector<double>& maps_x = waypoints.map_waypoints_x_;
-    const vector<double>& maps_y = waypoints.map_waypoints_y_;
+    int closestWaypointIndex = getClosestWaypointIndex(self_x, self_y);
+    const Waypoint& closestWaypoint = waypoints_[closestWaypointIndex];
 
-    int closestWaypoint = getClosestWaypoint(x, y, waypoints);
+    double wp_x = closestWaypoint.getX();
+    double wp_y = closestWaypoint.getY();
+    double heading = atan2( (wp_y-self_y),(wp_x-self_x) );
+    double angle = abs(self_yaw_rad-heading);
 
-    double map_x = maps_x[closestWaypoint];
-    double map_y = maps_y[closestWaypoint];
-
-    double heading = atan2( (map_y-y),(map_x-x) );
-
-    double angle = abs(theta-heading);
-
-    if(angle > pi()/4)
-    {
-        closestWaypoint++;
+    if(angle > toolkit::pi()/4) {
+        closestWaypointIndex++;
     }
 
-    return closestWaypoint;
+    return closestWaypointIndex;
 
 }
 
-void Waypoint::getNextWaypoints(const Waypoints& waypoints, const State& state, const unsigned int n, Waypoints& waypoints_subset) {
-    double next_x = state.self_.car_x_;
-    double next_y = state.self_.car_y_;
-    double next_yaw = state.self_.car_yaw_rad_;
-
-    auto waypoints_data = waypoints.getWaypoints();
-    for (auto it = waypoints_data.begin(); it != waypoints_data.end(); it++) {
-
-        /*
-
-        int index = Waypoints::getNextWaypoint(next_x, next_y, next_yaw, waypoints);
-
-        waypoints_subset.map_waypoints_x_.push_back(waypoints.map_waypoints_x_[index]);
-        waypoints_subset.map_waypoints_y_.push_back(waypoints.map_waypoints_y_[index]);
-        waypoints_subset.map_waypoints_s_.push_back(waypoints.map_waypoints_s_[index]);
-        waypoints_subset.map_waypoints_dx_.push_back(waypoints.map_waypoints_dx_[index]);
-        waypoints_subset.map_waypoints_dy_.push_back(waypoints.map_waypoints_dy_[index]);
-
-        next_x = waypoints.map_waypoints_x_[index];
-        next_y = waypoints.map_waypoints_y_[index];
-        */
-    }
+void Waypoints::getNextWaypoints(const Car& car, const unsigned int& amount, Waypoints& subset) const {
+    const int next_waypoint_index = getNextWaypointIndex(car.car_x_, car.car_y_, car.car_yaw_rad_);
+    getSubset(next_waypoint_index, amount, subset);
 }
+
+

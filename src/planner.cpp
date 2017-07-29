@@ -8,57 +8,9 @@
 
 namespace {
 
-    void getNextWaypoints(const Waypoints& waypoints, const State& state, const unsigned int n, Waypoints& waypoints_subset) {
-        double next_x = state.self_.car_x_;
-        double next_y = state.self_.car_y_;
-        double next_yaw = state.self_.car_yaw_rad_;
-
-        for (int i = 0; i < n; i++) {
-            int index = toolkit::getNextWaypoint(next_x, next_y, next_yaw, waypoints);
-
-            waypoints_subset.map_waypoints_x_.push_back(waypoints.map_waypoints_x_[index]);
-            waypoints_subset.map_waypoints_y_.push_back(waypoints.map_waypoints_y_[index]);
-            waypoints_subset.map_waypoints_s_.push_back(waypoints.map_waypoints_s_[index]);
-            waypoints_subset.map_waypoints_dx_.push_back(waypoints.map_waypoints_dx_[index]);
-            waypoints_subset.map_waypoints_dy_.push_back(waypoints.map_waypoints_dy_[index]);
-
-            next_x = waypoints.map_waypoints_x_[index];
-            next_y = waypoints.map_waypoints_y_[index];
-        }
-    }
-
     void stayInLane(const State& state, const Waypoints& waypoints, Command& command) {
-
-        // get the next 3 waypoints
-        Waypoints waypoints_subset;
-        getNextWaypoints(waypoints, state, 3, waypoints_subset);
-
-        // transform these waypoints to car coordinates
-        toolkit::transformWaypoints(waypoints_subset, state);
-
-        tk::spline spline;
-        spline.set_points(waypoints_subset.map_waypoints_x_, waypoints_subset.map_waypoints_y_);
 /*
-        // sample from waypoints_subset;
-        Waypoints sampled_waypoints;
-        double xrange = waypoints_subset.map_waypoints_x_[2] - waypoints_subset.map_waypoints_x_[0];
-        double xincrement = xrange / 1000.0;
-        double curx = waypoints_subset.map_waypoints_x_[0];
 
-        double srange = waypoints_subset.map_waypoints_s_[2] - waypoints_subset.map_waypoints_s_[0];
-        double sincrement = srange / 1000.0;
-        double curs = waypoints_subset.map_waypoints_s_[0];
-        for (int i = 0; i < 1000; i++) {
-            sampled_waypoints.map_waypoints_x_.push_back(curx);
-            sampled_waypoints.map_waypoints_y_.push_back(spline(curx));
-            sampled_waypoints.map_waypoints_s_.push_back(curs);
-            sampled_waypoints.map_waypoints_dx_.push_back(0.0);
-            sampled_waypoints.map_waypoints_dy_.push_back(0.0);
-
-            curx += xincrement;
-            curs += sincrement;
-        }
-*/
         double car_s = state.self_.car_s_;
         double car_d = state.self_.car_d_;
 
@@ -67,12 +19,12 @@ namespace {
         {
             car_s += dist_inc;
 
-            vector<double> xy_coordinates = toolkit::toXY(car_s, car_d, waypoints);
+            vector<double> xy_coordinates = toolkit::toXY(car_s, car_d, interpolated_waypoints); //!!! missing
 
             command.next_path_.path_x_.push_back(xy_coordinates[0]);
             command.next_path_.path_y_.push_back(xy_coordinates[1]);
         }
-
+*/
     }
 
     void goForward(const State& state, Command& command) {

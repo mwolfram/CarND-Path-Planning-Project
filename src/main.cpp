@@ -33,8 +33,8 @@ int main() {
     uWS::Hub h;
 
     // Load up map values for waypoint's x,y,s and d normalized normal vectors
-    std::vector<Waypoint> waypoints;
-    toolkit::readWaypoints(waypoints);
+    Waypoints waypoints;
+    waypoints.readFromFile();
 
     // create planner
     Planner planner;

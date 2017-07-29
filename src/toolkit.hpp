@@ -14,8 +14,26 @@
 
 using std::vector;
 using std::string;
-using std::ifstream;
-using std::istringstream;
+
+namespace transform {
+
+    /**
+     * @brief transforms a point to car coordinate system
+     * @param ptx
+     * @param pty
+     * @param refx
+     * @param refy
+     * @param refpsi
+     */
+    static void toCarFrame(double& ptx, double& pty, const double& refx, const double& refy, const double& refpsi) {
+        double deltaX = ptx - refx;
+        double deltaY = pty - refy;
+        double cosdiff = cos(0-refpsi);
+        double sindiff = sin(0-refpsi);
+        ptx = (deltaX * cosdiff - deltaY * sindiff);
+        pty = (deltaX * sindiff + deltaY * cosdiff);
+    }
+}
 
 namespace toolkit {
 
@@ -26,16 +44,6 @@ namespace toolkit {
     inline double rad2deg(double x) { return x * 180 / pi(); }
     inline double mph2mps(double x) { return x * mph2mpsFactor(); }
     inline double mps2mph(double x) { return x / mph2mpsFactor(); }
-
-    // transform a point to car coordinate system
-    static void toCarFrame(double& ptx, double& pty, const double& refx, const double& refy, const double& refpsi) {
-        double deltaX = ptx - refx;
-        double deltaY = pty - refy;
-        double cosdiff = cos(0-refpsi);
-        double sindiff = sin(0-refpsi);
-        ptx = (deltaX * cosdiff - deltaY * sindiff);
-        pty = (deltaX * sindiff + deltaY * cosdiff);
-    }
 
     static void plotArrow(double x, double y, double direction, svg::Document& document) {
 
@@ -62,7 +70,7 @@ namespace toolkit {
     static double distance(double x1, double y1, double x2, double y2) {
         return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
     }
-
+/*
     // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
     static vector<double> toFrenet(double x, double y, double theta, const Waypoints& waypoints) {
 
@@ -146,7 +154,7 @@ namespace toolkit {
         return {x,y};
 
     }
-
+*/
 } // end of namespace
 
 #endif
