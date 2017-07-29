@@ -73,6 +73,16 @@ void Waypoints::transformToCarFrame(const Car& self, Waypoints &transformed_wayp
     }
 }
 
+// TODO duplicate code
+void Waypoints::transformToMapFrame(const Car& self, Waypoints &transformed_waypoints) const {
+    for (auto it = waypoints_.begin(); it != waypoints_.end(); it++) {
+        double wp_x = it->getX();
+        double wp_y = it->getY();
+        transform::toMapFrame(wp_x, wp_y, self.car_x_, self.car_y_, self.car_yaw_rad_);
+        transformed_waypoints.add(Waypoint(wp_x, wp_y, it->getS(), it->getDX(), it->getY())); // TODO check if it's ok to take these values from previous waypoint or if we have to transform them too
+    }
+}
+
 void Waypoints::getApproximateOriginAndDirection(double& ref_x, double& ref_y, double& ref_yaw) const {
     assert(waypoints_.size() > 1);
 
@@ -88,7 +98,7 @@ void Waypoints::getApproximateOriginAndDirection(double& ref_x, double& ref_y, d
     ref_yaw = atan2( (ref_y2-ref_y),(ref_x2-ref_x) );
 }
 
-void Waypoints::interpolate(const unsigned int& amount, Waypoints& interpolated_waypoints) {
+void Waypoints::interpolate(const unsigned int& amount, Waypoints& interpolated_waypoints) const {
 
     // determine the origin and the direction of the set of waypoints
     double ref_x, ref_y, ref_yaw;

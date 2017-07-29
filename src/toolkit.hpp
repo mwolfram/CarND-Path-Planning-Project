@@ -14,6 +14,32 @@ using std::vector;
 using std::string;
 
 /*
+ * Toolkit
+ */
+namespace toolkit {
+
+    constexpr double pi() { return M_PI; }
+    constexpr double mph2mpsFactor() { return 0.44704; }
+
+    inline double deg2rad(double x) { return x * pi() / 180; }
+    inline double rad2deg(double x) { return x * 180 / pi(); }
+
+    inline double mph2mps(double x) { return x * mph2mpsFactor(); }
+    inline double mps2mph(double x) { return x / mph2mpsFactor(); }
+
+    static double distance(double x1, double y1, double x2, double y2) {
+        return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+    }
+
+    static double normalize(const double angle_rad) {
+        double TWO_PI = 2 * pi();
+        return angle_rad - TWO_PI * floor((angle_rad + pi()) / TWO_PI );
+    }
+
+} // end of namespace toolkit
+
+
+/*
  * Transform
  */
 namespace transform {
@@ -26,6 +52,7 @@ namespace transform {
      * @param refy
      * @param refpsi
      */
+    // TODO rename to tf?
     static void toCarFrame(double& ptx, double& pty, const double& refx, const double& refy, const double& refpsi) {
         double deltaX = ptx - refx;
         double deltaY = pty - refy;
@@ -33,6 +60,23 @@ namespace transform {
         double sindiff = sin(0-refpsi);
         ptx = (deltaX * cosdiff - deltaY * sindiff);
         pty = (deltaX * sindiff + deltaY * cosdiff);
+    }
+
+    /**
+     * @brief transforms a point from car to map frame
+     * @param ptx
+     * @param pty
+     * @param refx
+     * @param refy
+     * @param refpsi
+     */
+    // TODO rename to inverse tf?
+    static void toMapFrame(double& ptx, double& pty, const double& refx, const double& refy, const double& refpsi) {
+        double inverse_refx = 0.0;
+        double inverse_refy = 0.0;
+        double inverse_refpsi = -refpsi;
+        toCarFrame(inverse_refx, inverse_refy, refx, refy, refpsi);
+        toCarFrame(ptx, pty, inverse_refx, inverse_refy, inverse_refpsi);
     }
 
 } // end of namespace transform
@@ -164,26 +208,5 @@ namespace plot {
     }
 
 } // end of namespace plot
-
-
-/*
- * Toolkit
- */
-namespace toolkit {
-
-    constexpr double pi() { return M_PI; }
-    constexpr double mph2mpsFactor() { return 0.44704; }
-
-    inline double deg2rad(double x) { return x * pi() / 180; }
-    inline double rad2deg(double x) { return x * 180 / pi(); }
-
-    inline double mph2mps(double x) { return x * mph2mpsFactor(); }
-    inline double mps2mph(double x) { return x / mph2mpsFactor(); }
-
-    static double distance(double x1, double y1, double x2, double y2) {
-        return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
-    }
-
-} // end of namespace toolkit
 
 #endif

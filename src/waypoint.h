@@ -44,13 +44,14 @@ public:
     void readFromFile();
 
     // manipulate
-    void transformToCarFrame(const Car& car, Waypoints& transformed_waypoints) const;
+    void transformToCarFrame(const Car& self, Waypoints& transformed_waypoints) const;
+    void transformToMapFrame(const Car& self, Waypoints &transformed_waypoints) const;
     int getClosestWaypointIndex(const double& x, const double& y) const;
     int getNextWaypointIndex(const double& self_x, const double& self_y, const double& self_yaw_rad) const;
     void getNextWaypoints(const Car& car, const unsigned int &amount, Waypoints& subset) const;
     void getSubset(const unsigned int &start_index, const unsigned int& amount, Waypoints& subset) const;
     void getApproximateOriginAndDirection(double& ref_x, double& ref_y, double& ref_yaw) const;
-    void interpolate(const unsigned int &amount, Waypoints& interpolated_waypoints);
+    void interpolate(const unsigned int &amount, Waypoints& interpolated_waypoints) const;
 
     // plot
     void plotWaypoints(svg::Document& document) const;
