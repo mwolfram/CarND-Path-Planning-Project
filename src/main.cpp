@@ -1,14 +1,13 @@
-#include <fstream>
 #include <uWS/uWS.h>
 #include <chrono>
 #include <iostream>
 #include <thread>
-#include "Eigen-3.3/Eigen/Core"
-#include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 
 #include "planner.h"
 #include "data.h"
+#include "toolkit.hpp"
+#include "waypoint.h"
 
 using namespace std;
 
@@ -34,34 +33,8 @@ int main() {
     uWS::Hub h;
 
     // Load up map values for waypoint's x,y,s and d normalized normal vectors
-    Waypoints waypoints;
-
-    // Waypoint map to read from
-    string map_file_ = "data/highway_map.csv";
-    // The max s value before wrapping around the track back to 0
-    double max_s = 6945.554;
-
-    ifstream in_map_(map_file_.c_str(), ifstream::in);
-
-    string line;
-    while (getline(in_map_, line)) {
-        istringstream iss(line);
-        double x;
-        double y;
-        float s;
-        float d_x;
-        float d_y;
-        iss >> x;
-        iss >> y;
-        iss >> s;
-        iss >> d_x;
-        iss >> d_y;
-        waypoints.map_waypoints_x_.push_back(x);
-        waypoints.map_waypoints_y_.push_back(y);
-        waypoints.map_waypoints_s_.push_back(s);
-        waypoints.map_waypoints_dx_.push_back(d_x);
-        waypoints.map_waypoints_dy_.push_back(d_y);
-    }
+    std::vector<Waypoint> waypoints;
+    toolkit::readWaypoints(waypoints);
 
     // create planner
     Planner planner;
@@ -91,8 +64,8 @@ int main() {
                     state.self_.car_y_ = j[1]["y"];
                     state.self_.car_s_ = j[1]["s"];
                     state.self_.car_d_ = j[1]["d"];
-                    state.self_.car_yaw_ = j[1]["yaw"];
-                    state.self_.car_speed_mph_ = j[1]["speed"];
+                    state.self_.car_yaw_rad_ = toolkit::deg2rad(j[1]["yaw"]); // TODO make sure this is valid
+                    state.self_.car_speed_mps_ = toolkit::mph2mps(j[1]["speed"]);
 
                     // Previous path data given to the Planner
                     auto previous_path_x = j[1]["previous_path_x"];
@@ -118,8 +91,8 @@ int main() {
                         other.car_y_ = other_car_values[2];
                         other.car_s_ = other_car_values[3];
                         other.car_d_ = other_car_values[4];
-                        other.car_yaw_ = other_car_values[5];
-                        other.car_speed_mph_ = other_car_values[6];
+                        other.car_yaw_rad_ = other_car_values[5];
+                        other.car_speed_mps_ = other_car_values[6];
                         state.others_.push_back(other);
                     }
 

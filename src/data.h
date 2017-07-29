@@ -25,8 +25,8 @@ struct Car {
     double car_y_;
     double car_s_;
     double car_d_;
-    double car_yaw_;
-    double car_speed_mph_;
+    double car_yaw_rad_;
+    double car_speed_mps_;
 };
 
 struct State {
@@ -35,14 +35,6 @@ struct State {
     Path previous_path_;
     std::vector<Car> others_;
 
-};
-
-struct Waypoints {
-    std::vector<double> map_waypoints_x_;
-    std::vector<double> map_waypoints_y_;
-    std::vector<double> map_waypoints_s_;
-    std::vector<double> map_waypoints_dx_;
-    std::vector<double> map_waypoints_dy_;
 };
 
 struct Command {

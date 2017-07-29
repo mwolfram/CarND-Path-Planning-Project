@@ -10,6 +10,7 @@ set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 set(sources
     src/planner.cpp
     src/configuration.cpp
+    src/waypoint.cpp
     )
 
 set(main-sources ${sources} src/main.cpp)
@@ -17,7 +18,8 @@ set(main-sources ${sources} src/main.cpp)
 set(test-sources ${sources} test/test_main.cpp
     test/test_factorial.cpp
     test/test_configuration.cpp
-    test/test_toolkit.cpp)
+    test/test_toolkit.cpp
+    test/test_plot.cpp)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 

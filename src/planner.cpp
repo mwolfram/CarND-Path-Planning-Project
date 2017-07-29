@@ -4,24 +4,14 @@
 #include "configuration.h"
 #include "toolkit.hpp"
 #include "data.h"
-#include "spline.h"
+#include "simple_svg_1.0.0.hpp"
 
 namespace {
-
-    // TODO void stayInLaneAvoidingOtherVehicles
-
-    void transformWaypoints(Waypoints& waypoints, const State& state) {
-        for (unsigned int i = 0; i < waypoints.map_waypoints_x_.size(); i++) {
-            toolkit::toCarFrame(waypoints.map_waypoints_x_[i],
-                                waypoints.map_waypoints_y_[i],
-                                state.self_.car_x_, state.self_.car_y_, toolkit::deg2rad(state.self_.car_yaw_));
-        }
-    }
 
     void getNextWaypoints(const Waypoints& waypoints, const State& state, const unsigned int n, Waypoints& waypoints_subset) {
         double next_x = state.self_.car_x_;
         double next_y = state.self_.car_y_;
-        double next_yaw = toolkit::deg2rad(state.self_.car_yaw_);
+        double next_yaw = state.self_.car_yaw_rad_;
 
         for (int i = 0; i < n; i++) {
             int index = toolkit::getNextWaypoint(next_x, next_y, next_yaw, waypoints);
@@ -44,7 +34,7 @@ namespace {
         getNextWaypoints(waypoints, state, 3, waypoints_subset);
 
         // transform these waypoints to car coordinates
-        transformWaypoints(waypoints_subset, state);
+        toolkit::transformWaypoints(waypoints_subset, state);
 
         tk::spline spline;
         spline.set_points(waypoints_subset.map_waypoints_x_, waypoints_subset.map_waypoints_y_);
@@ -97,7 +87,7 @@ namespace {
         double car_y;
         double car_yaw;
         double path_point_distance = 0.0;
-        double car_speed_mps = toolkit::mph2mps(state.self_.car_speed_mph_);
+        double car_speed_mps = state.self_.car_speed_mps_;
 
         int path_size = state.previous_path_.path_x_.size();
 
@@ -113,7 +103,7 @@ namespace {
         {
             car_x = state.self_.car_x_;
             car_y = state.self_.car_y_;
-            car_yaw = toolkit::deg2rad(state.self_.car_yaw_);
+            car_yaw = state.self_.car_yaw_rad_;
         }
         else
         {
@@ -142,8 +132,8 @@ namespace {
         path_point_distance = next_speed_mps * rate;
         for(int i = 0; i < 100-path_size; i++) {
 
-            command.next_path_.path_x_.push_back(car_x+(path_point_distance)*cos(toolkit::deg2rad(car_yaw)));
-            command.next_path_.path_y_.push_back(car_y+(path_point_distance)*sin(toolkit::deg2rad(car_yaw)));
+            command.next_path_.path_x_.push_back(car_x+(path_point_distance)*cos(car_yaw));
+            command.next_path_.path_y_.push_back(car_y+(path_point_distance)*sin(car_yaw));
 
             // increase speed for next timestep
             next_speed_mps += max_acceleration_mpss * rate;
@@ -174,7 +164,7 @@ namespace {
         {
             pos_x = state.self_.car_x_;
             pos_y = state.self_.car_y_;
-            angle = toolkit::deg2rad(state.self_.car_yaw_);
+            angle = state.self_.car_yaw_rad_;
         }
         else
         {
@@ -189,7 +179,7 @@ namespace {
         double max_acceleration_mpss = 5;
         double rate = 0.02;
         double max_speed_mps = toolkit::mph2mps(50.0);
-        double next_speed_mps = toolkit::mph2mps(state.self_.car_speed_mph_);;
+        double next_speed_mps = state.self_.car_speed_mps_;
         if (next_speed_mps > max_speed_mps) {
             next_speed_mps = max_speed_mps;
         }

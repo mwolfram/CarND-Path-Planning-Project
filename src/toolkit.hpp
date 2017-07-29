@@ -3,12 +3,19 @@
 
 #include <math.h>
 #include <vector>
-//#include "Eigen-3.3/Eigen/Core"
-//#include "Eigen-3.3/Eigen/QR"
-
+#include <fstream>
+#include <sstream>
+#include <string>
 #include "data.h"
 
+#include "spline.h"
+#include "waypoint.h"
+#include "simple_svg_1.0.0.hpp"
+
 using std::vector;
+using std::string;
+using std::ifstream;
+using std::istringstream;
 
 namespace toolkit {
 
@@ -20,60 +27,44 @@ namespace toolkit {
     inline double mph2mps(double x) { return x * mph2mpsFactor(); }
     inline double mps2mph(double x) { return x / mph2mpsFactor(); }
 
-    double distance(double x1, double y1, double x2, double y2) {
+    // transform a point to car coordinate system
+    static void toCarFrame(double& ptx, double& pty, const double& refx, const double& refy, const double& refpsi) {
+        double deltaX = ptx - refx;
+        double deltaY = pty - refy;
+        double cosdiff = cos(0-refpsi);
+        double sindiff = sin(0-refpsi);
+        ptx = (deltaX * cosdiff - deltaY * sindiff);
+        pty = (deltaX * sindiff + deltaY * cosdiff);
+    }
+
+    static void plotArrow(double x, double y, double direction, svg::Document& document) {
+
+        double len = 150.0;
+
+        double x2 = x + cos(direction) * len;
+        double y2 = y + sin(direction) * len;
+
+        svg::Line line(svg::Point(x, y), svg::Point(x2,y2), svg::Stroke(5, svg::Color(0,0,255)));
+        document << line;
+
+        double pointSize = 30.0;
+        svg::Circle circle(svg::Point(x, y),
+                           pointSize,
+                           svg::Fill(svg::Color(0, 0, 255)));
+        document << circle;
+    }
+
+    static void plotState(const State& state) {
+        // see if we can plot the state, then apply a transformation on waypoints for example
+
+    }
+
+    static double distance(double x1, double y1, double x2, double y2) {
         return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
     }
 
-    int getClosestWaypoint(double x, double y, const Waypoints& waypoints) {
-
-        const vector<double>& maps_x = waypoints.map_waypoints_x_;
-        const vector<double>& maps_y = waypoints.map_waypoints_y_;
-
-        double closestLen = 100000; //large number
-        int closestWaypoint = 0;
-
-        for(int i = 0; i < maps_x.size(); i++)
-        {
-            double map_x = maps_x[i];
-            double map_y = maps_y[i];
-            double dist = distance(x,y,map_x,map_y);
-            if(dist < closestLen)
-            {
-                closestLen = dist;
-                closestWaypoint = i;
-            }
-
-        }
-
-        return closestWaypoint;
-
-    }
-
-    int getNextWaypoint(double x, double y, double theta, const Waypoints& waypoints) {
-
-        const vector<double>& maps_x = waypoints.map_waypoints_x_;
-        const vector<double>& maps_y = waypoints.map_waypoints_y_;
-
-        int closestWaypoint = getClosestWaypoint(x, y, waypoints);
-
-        double map_x = maps_x[closestWaypoint];
-        double map_y = maps_y[closestWaypoint];
-
-        double heading = atan2( (map_y-y),(map_x-x) );
-
-        double angle = abs(theta-heading);
-
-        if(angle > pi()/4)
-        {
-            closestWaypoint++;
-        }
-
-        return closestWaypoint;
-
-    }
-
     // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-    vector<double> toFrenet(double x, double y, double theta, const Waypoints& waypoints) {
+    static vector<double> toFrenet(double x, double y, double theta, const Waypoints& waypoints) {
 
         const vector<double>& maps_x = waypoints.map_waypoints_x_;
         const vector<double>& maps_y = waypoints.map_waypoints_y_;
@@ -125,7 +116,7 @@ namespace toolkit {
     }
 
     // Transform from Frenet s,d coordinates to Cartesian x,y
-    vector<double> toXY(double s, double d, const Waypoints& waypoints) {
+    static vector<double> toXY(double s, double d, const Waypoints& waypoints) {
 
         const vector<double>& maps_x = waypoints.map_waypoints_x_;
         const vector<double>& maps_y = waypoints.map_waypoints_y_;
@@ -155,50 +146,6 @@ namespace toolkit {
         return {x,y};
 
     }
-
-    // transform a point to car coordinate system
-    void toCarFrame(double& ptx, double& pty, const double& refx, const double& refy, const double& refpsi) {
-        double deltaX = ptx - refx;
-        double deltaY = pty - refy;
-        double cosdiff = cos(0-refpsi);
-        double sindiff = sin(0-refpsi);
-        ptx = (deltaX * cosdiff - deltaY * sindiff);
-        pty = (deltaX * sindiff + deltaY * cosdiff);
-    }
-
-    /*
-    // Evaluate a polynomial.
-    double polyeval(Eigen::VectorXd coeffs, double x) {
-        double result = 0.0;
-        for (int i = 0; i < coeffs.size(); i++) {
-            result += coeffs[i] * pow(x, i);
-        }
-        return result;
-    }
-
-    // Fit a polynomial.
-    // Adapted from
-    // https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
-    Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals, int order) {
-        assert(xvals.size() == yvals.size());
-        assert(order >= 1 && order <= xvals.size() - 1);
-        Eigen::MatrixXd A(xvals.size(), order + 1);
-
-        for (int i = 0; i < xvals.size(); i++) {
-            A(i, 0) = 1.0;
-        }
-
-        for (int j = 0; j < xvals.size(); j++) {
-            for (int i = 0; i < order; i++) {
-                A(j, i + 1) = A(j, i) * xvals(j);
-            }
-        }
-
-        auto Q = A.householderQr();
-        auto result = Q.solve(yvals);
-        return result;
-    }
-    */
 
 } // end of namespace
 
