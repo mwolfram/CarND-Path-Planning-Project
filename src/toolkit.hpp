@@ -6,15 +6,16 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "data.h"
 
-#include "spline.h"
 #include "waypoint.h"
 #include "simple_svg_1.0.0.hpp"
 
 using std::vector;
 using std::string;
 
+/*
+ * Transform
+ */
 namespace transform {
 
     /**
@@ -33,43 +34,14 @@ namespace transform {
         ptx = (deltaX * cosdiff - deltaY * sindiff);
         pty = (deltaX * sindiff + deltaY * cosdiff);
     }
-}
 
-namespace toolkit {
+} // end of namespace transform
 
-    // For converting back and forth between radians and degrees.
-    constexpr double pi() { return M_PI; }
-    constexpr double mph2mpsFactor() { return 0.44704; }
-    inline double deg2rad(double x) { return x * pi() / 180; }
-    inline double rad2deg(double x) { return x * 180 / pi(); }
-    inline double mph2mps(double x) { return x * mph2mpsFactor(); }
-    inline double mps2mph(double x) { return x / mph2mpsFactor(); }
 
-    static void plotArrow(double x, double y, double direction, svg::Document& document) {
-
-        double len = 150.0;
-
-        double x2 = x + cos(direction) * len;
-        double y2 = y + sin(direction) * len;
-
-        svg::Line line(svg::Point(x, y), svg::Point(x2,y2), svg::Stroke(5, svg::Color(0,0,255)));
-        document << line;
-
-        double pointSize = 30.0;
-        svg::Circle circle(svg::Point(x, y),
-                           pointSize,
-                           svg::Fill(svg::Color(0, 0, 255)));
-        document << circle;
-    }
-
-    static void plotState(const State& state) {
-        // see if we can plot the state, then apply a transformation on waypoints for example
-
-    }
-
-    static double distance(double x1, double y1, double x2, double y2) {
-        return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
-    }
+/*
+ * Conversion
+ */
+namespace conversion {
 /*
     // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
     static vector<double> toFrenet(double x, double y, double theta, const Waypoints& waypoints) {
@@ -155,6 +127,63 @@ namespace toolkit {
 
     }
 */
-} // end of namespace
+} // end of namespace conversion
+
+
+/*
+ * Plot
+ */
+namespace plot {
+    static void plotArrow(double x, double y, double direction, svg::Document& document) {
+
+        double len = 150.0;
+
+        double x2 = x + cos(direction) * len;
+        double y2 = y + sin(direction) * len;
+
+        svg::Line line(svg::Point(x, y), svg::Point(x2,y2), svg::Stroke(5, svg::Color(0,0,255)));
+        document << line;
+
+        double pointSize = 30.0;
+        svg::Circle circle(svg::Point(x, y),
+                           pointSize,
+                           svg::Fill(svg::Color(0, 0, 255)));
+        document << circle;
+    }
+
+    static void plotAxes(svg::Document& document) {
+        double x_size = 5000.0;
+        double y_size = 5000.0;
+        int brightness = 160;
+
+        svg::Line horizontal_line(svg::Point(-x_size, 0), svg::Point(x_size, 0), svg::Stroke(3, svg::Color(brightness,brightness,brightness)));
+        svg::Line vertical_line(svg::Point(0, -y_size), svg::Point(0, y_size), svg::Stroke(3, svg::Color(brightness,brightness,brightness)));
+
+        document << horizontal_line;
+        document << vertical_line;
+    }
+
+} // end of namespace plot
+
+
+/*
+ * Toolkit
+ */
+namespace toolkit {
+
+    constexpr double pi() { return M_PI; }
+    constexpr double mph2mpsFactor() { return 0.44704; }
+
+    inline double deg2rad(double x) { return x * pi() / 180; }
+    inline double rad2deg(double x) { return x * 180 / pi(); }
+
+    inline double mph2mps(double x) { return x * mph2mpsFactor(); }
+    inline double mps2mph(double x) { return x / mph2mpsFactor(); }
+
+    static double distance(double x1, double y1, double x2, double y2) {
+        return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+    }
+
+} // end of namespace toolkit
 
 #endif

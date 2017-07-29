@@ -1,9 +1,11 @@
 #include <vector>
 #include <limits>
+#include <cassert>
 
 #include "waypoint.h"
 #include "data.h"
 #include "toolkit.hpp"
+#include "spline.h"
 
 /**
  * Single Waypoint
@@ -75,7 +77,7 @@ void Waypoints::getApproximateOriginAndDirection(double& ref_x, double& ref_y, d
     assert(waypoints_.size() > 1);
 
     int origin_index = 0;
-    int target_index = 1; // TODO or use the last waypoint here?
+    int target_index = waypoints_.size()-1;
 
     ref_x = waypoints_[origin_index].getX();
     ref_y = waypoints_[origin_index].getY();
@@ -112,12 +114,12 @@ void Waypoints::interpolate(const unsigned int& amount, Waypoints& interpolated_
 
     // sample interpolated waypoints from waypoints
     double first_x = transformed_waypoints.getWaypoints()[0].getX();
-    double last_x = transformed_waypoints.getWaypoints()[transformed_waypoints.getWaypoints().size()].getX();
+    double last_x = transformed_waypoints.getWaypoints()[transformed_waypoints.getWaypoints().size()-1].getX();
     double range_x = last_x - first_x;
     double increment_x = range_x / amount;
 
     double first_s = transformed_waypoints.getWaypoints()[0].getS();
-    double last_s = transformed_waypoints.getWaypoints()[transformed_waypoints.getWaypoints().size()].getS();
+    double last_s = transformed_waypoints.getWaypoints()[transformed_waypoints.getWaypoints().size()-1].getS();
     double range_s = last_s - first_s;
     double increment_s = range_s / amount;
 
@@ -148,6 +150,8 @@ void Waypoints::plotWaypoints(svg::Document& document) const {
 }
 
 void Waypoints::getSubset(const unsigned int& start_index, const unsigned int &amount, Waypoints& subset) const {
+    assert(waypoints_.size() >= start_index + amount);
+
     for (int i = start_index; i < start_index + amount; ++i) {
         subset.waypoints_.push_back(waypoints_[i]);
     }
