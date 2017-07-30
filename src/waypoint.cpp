@@ -89,6 +89,32 @@ void Waypoints::addAll(const Waypoints& waypoints) {
     }
 }
 
+void Waypoints::addAll(const Path& path) {
+    int path_size = path.path_x_.size();
+
+    // fill the new path with the points from the old path
+    for(int i = 0; i < path_size; i++) {
+        double x = path.path_x_[i];
+        double y = path.path_y_[i];
+        double s = 0.0;
+
+        // for the last path element, we know s (and even d)
+        if (i == path_size-1) {
+            s = path.end_path_s_;
+        }
+
+        // dx and dy are never used here
+        waypoints_.push_back(Waypoint(x, y, s, 0.0, 0.0));
+    }
+}
+
+void Waypoints::toPath(Path& path) const {
+    for (auto it = getWaypoints().begin(); it != getWaypoints().end(); it++) {
+        path.path_x_.push_back(it->getX());
+        path.path_y_.push_back(it->getY());
+    }
+}
+
 void Waypoints::getApproximateOriginAndDirection(double& ref_x, double& ref_y, double& ref_yaw) const {
     assert(waypoints_.size() > 1);
 
@@ -104,7 +130,7 @@ void Waypoints::getApproximateOriginAndDirection(double& ref_x, double& ref_y, d
     ref_yaw = atan2( (ref_y2-ref_y),(ref_x2-ref_x) );
 }
 
-void Waypoints::interpolate(const double& initial_gap, const unsigned int& first_waypoint_index, Waypoints& interpolated_waypoints) const {
+void Waypoints::interpolate(double& initial_gap, const double& target_gap, const unsigned int& first_waypoint_index, Waypoints& interpolated_waypoints) const {
 
     // determine the origin and the direction of the set of waypoints
     double ref_x, ref_y, ref_yaw;
@@ -141,6 +167,7 @@ void Waypoints::interpolate(const double& initial_gap, const unsigned int& first
     double current_x = first_x;
     double current_y = spline(current_x);
     double current_s = first_s;
+    double acceleration = 0.01; //TODO parameters
 
     Waypoints interpolated_transformed_waypoints;
 
@@ -168,6 +195,16 @@ void Waypoints::interpolate(const double& initial_gap, const unsigned int& first
             // push intermediate waypoint
             interpolated_transformed_waypoints.waypoints_.push_back(Waypoint(current_x, current_y, current_s, 0.0, 0.0)); // TODO ok that we leave dx dy empty?
             s_since_last_wp = 0.0;
+
+            std::cout << "gap " << initial_gap << std::endl;
+
+            // adjust velocity
+            if (target_gap > initial_gap) {
+                initial_gap += acceleration;
+            }
+            else if (target_gap < initial_gap) {
+                initial_gap -= acceleration;
+            }
         }
     }
 

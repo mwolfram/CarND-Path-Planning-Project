@@ -8,100 +8,6 @@
 
 namespace {
 
-    void stayInLane(const State& state, const Waypoints& waypoints, Command& command, svg::Document& document, double d) {
-
-        INIReader ini("configuration/default.ini");
-        d = ini.GetReal("driving", "offset", 0.0);
-
-        //waypoints.plotWaypoints(document);
-
-        int path_size = state.previous_path_.path_x_.size();
-        double car_x;
-        double car_y;
-        double car_yaw;
-
-        double pos_x2;
-        double pos_y2;
-        double pos_x3;
-        double pos_y3;
-
-        //plot::plotPath(state.previous_path_, document);
-
-        // fill the new path with the points from the old path
-        for(int i = 0; i < path_size; i++)
-        {
-            command.next_path_.path_x_.push_back(state.previous_path_.path_x_[i]);
-            command.next_path_.path_y_.push_back(state.previous_path_.path_y_[i]);
-        }
-
-        // analyze the path, set the car position
-        if(path_size < 3)
-        {
-            car_x = state.self_.car_x_;
-            car_y = state.self_.car_y_;
-            car_yaw = state.self_.car_yaw_rad_;
-        }
-        else
-        {
-            car_x = state.previous_path_.path_x_[path_size-1];
-            car_y = state.previous_path_.path_y_[path_size-1];
-
-            pos_x2 = state.previous_path_.path_x_[path_size-2];
-            pos_y2 = state.previous_path_.path_y_[path_size-2];
-
-            pos_x3 = state.previous_path_.path_x_[path_size-3];
-            pos_y3 = state.previous_path_.path_y_[path_size-3];
-
-            car_yaw = atan2(car_y-pos_y3,car_x-pos_x3);
-        }
-
-        // now to the NEW part of the path
-        Car current_car;
-        current_car.car_x_ = car_x;
-        current_car.car_y_ = car_y;
-        current_car.car_yaw_rad_ = car_yaw;
-
-        Waypoints previous_waypoints;
-        if (path_size > 2) {
-            // add elements from previous path
-            previous_waypoints.add(Waypoint(pos_x3, pos_y3, 0.0, 0.0, 0.0)); // TODO need S
-            previous_waypoints.add(Waypoint(pos_x2, pos_y2, 0.0, 0.0, 0.0));
-            previous_waypoints.add(Waypoint(car_x, car_y, state.previous_path_.end_path_s_, 0.0, 0.0));
-        }
-
-        // now add future waypoints, and offset them
-        Waypoints future_waypoints;
-        waypoints.getNextWaypoints(current_car, 3, future_waypoints); //current car was the end of the previous path
-
-        Waypoints offset_future_waypoints;
-        future_waypoints.offset(waypoints, d, offset_future_waypoints);
-
-        Waypoints waypoints_for_interpolation;
-        if (path_size > 2) {
-            waypoints_for_interpolation.addAll(previous_waypoints);
-        }
-        waypoints_for_interpolation.addAll(offset_future_waypoints);
-
-        Waypoints interpolated_waypoints;
-        waypoints_for_interpolation.interpolate(0.4, path_size > 2 ? 2: 0, interpolated_waypoints); // start two points before end of last path
-
-        //double car_s = state.self_.car_s_;
-        //double car_d = state.self_.car_d_;
-
-        //plot::plotArrow(current_car.car_x_, current_car.car_y_, current_car.car_yaw_rad_, document);
-
-        Waypoints next_few_waypoints;
-        interpolated_waypoints.getNextWaypoints(current_car, 100-path_size, next_few_waypoints);
-
-        for (auto it = next_few_waypoints.getWaypoints().begin(); it != next_few_waypoints.getWaypoints().end(); it++) {
-            command.next_path_.path_x_.push_back(it->getX());
-            command.next_path_.path_y_.push_back(it->getY());
-        }
-
-        //interpolated_waypoints.plotWaypoints(document);
-        //document.save();
-    }
-
     void goForward(const State& state, Command& command) {
 
         // configuration
@@ -239,12 +145,90 @@ Planner::Planner():
     ini_reader_("configuration/default.ini")
 {
     plot::plotAxes(plot_);
+    current_velocity_ = ini_reader_.GetReal("driving", "speed", 0.4); // TODO, no, this will be set by the car first
 }
 
+bool Planner::getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path) {
 
+    const unsigned int path_size = old_path.path_x_.size();
+    const unsigned int path_points_to_consider_for_orientation = std::min(3, path_size);
+
+    // we need at least two points for this to work.
+    if (path_points_to_consider_for_orientation < 2) {
+        return false;
+    }
+
+    double last_position_x = old_path.path_x_[path_size-1];
+    double last_position_y = old_path.path_y_[path_size-1];
+
+    pose_at_end_of_path.car_x_ = last_position_x;
+    pose_at_end_of_path.car_y_ = last_position_y;
+
+    double intermediate_position_x = old_path.path_x_[path_size-path_points_to_consider_for_orientation];
+    double intermediate_position_y = old_path.path_y_[path_size-path_points_to_consider_for_orientation];
+
+    pose_at_end_of_path.car_yaw_rad_ = atan2(last_position_y-intermediate_position_y, last_position_x-intermediate_position_x);
+
+    return true;
+}
+
+void Planner::generateTrajectory(const Waypoints& waypoints, const State& state, Command& command) {
+
+    // configuration
+    INIReader ini("configuration/default.ini");
+    const double d = ini.GetReal("driving", "d", 0.0);
+    const double requested_velocity = ini.GetReal("driving", "requested_velocity", 0.0);
+
+    Car current_pose;
+
+    // this could be the car itself, or something close to the end of the old path
+    Waypoints existing_waypoints;
+
+    bool use_old_path = state.previous_path_.path_x_.size() > 2; // TODO this as parameter, how much to reuse
+    if (use_old_path) {
+        existing_waypoints.addAll(state.previous_path_);
+        getPoseAtEndOfPath(state.previous_path_, current_pose);
+    }
+    else {
+        current_pose = state.self_;
+        existing_path.add(Waypoint(current_pose.car_x_, current_pose.car_y_, current_pose.car_yaw_rad_, 0.0, 0.0));
+    }
+
+
+    // Now to the NEW part of the path. Note: at this point the existing_waypoints could be size 1 or larger
+
+    // we need to
+    // 1. determine the continuing spline
+    // 2. sample over that spline
+    // --> try to get the same behaviour as before
+
+
+
+    // now add future waypoints, and offset them
+    // current car was the end of the previous path
+    Waypoints future_waypoints;
+    waypoints.getNextWaypoints(current_car, 3, future_waypoints);
+
+    Waypoints offset_future_waypoints;
+    future_waypoints.offset(waypoints, d, offset_future_waypoints);
+
+    Waypoints waypoints_for_interpolation;
+    if (path_size > 2) {
+        waypoints_for_interpolation.addAll(previous_waypoints);
+    }
+    waypoints_for_interpolation.addAll(offset_future_waypoints);
+
+    // start two points before end of last path
+    Waypoints interpolated_waypoints;
+    waypoints_for_interpolation.interpolate(current_velocity, target_velocity, path_size > 2 ? 2: 0, interpolated_waypoints);
+
+    Waypoints next_few_waypoints;
+    interpolated_waypoints.getNextWaypoints(current_car, 100-path_size, next_few_waypoints);
+
+    // write these waypoints into the command
+    next_few_waypoints.toPath(command.next_path_);
+}
 
 void Planner::plan(const Waypoints& waypoints, const State& state, Command& command) {
-    //goForward(state, command);
-    //goInCircle(state, command);
-    stayInLane(state, waypoints, command, plot_, ini_reader_.GetReal("driving", "offset", 0.0));
+    generateTrajectory(waypoints, state, command);
 }

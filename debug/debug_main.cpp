@@ -68,7 +68,7 @@ void interpolateWholeTrack() {
 
     document.save();
 }
-*/
+
 
 void generateTrajectory() {
     svg::Document document("plot.svg",
@@ -119,10 +119,10 @@ void generateTrajectory() {
 
     document.save();
 }
-
+*/
 int main() {
     //debugInterpolationAndTransformation();
     //interpolateWholeTrack();
-    generateTrajectory();
+    //generateTrajectory();
 }
 

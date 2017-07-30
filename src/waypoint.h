@@ -6,6 +6,7 @@ namespace svg {
 }
 
 class Car;
+class Path;
 
 class Waypoint {
 
@@ -42,6 +43,7 @@ public:
     // add
     void add(const Waypoint& waypoint) {waypoints_.push_back(waypoint);}
     void addAll(const Waypoints& waypoints);
+    void addAll(const Path& path);
 
     void readFromFile();
 
@@ -55,8 +57,9 @@ public:
     void getSubset(const unsigned int &start_index, const unsigned int& amount, Waypoints& subset) const;
     void getSubset(const unsigned int &start_index, Waypoints& subset) const;
     void getApproximateOriginAndDirection(double& ref_x, double& ref_y, double& ref_yaw) const;
-    void interpolate(const double &initial_gap, const unsigned int &first_waypoint_index, Waypoints& interpolated_waypoints) const;
+    void interpolate(double &initial_gap, const double& target_gap, const unsigned int &first_waypoint_index, Waypoints& interpolated_waypoints) const;
     void offset(const Waypoints& reference_waypoints, const double& d, Waypoints &offset_waypoints) const;
+    void toPath(Path& path) const;
 
     // plot
     void plotWaypoints(svg::Document& document) const;
