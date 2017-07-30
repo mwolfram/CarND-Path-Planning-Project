@@ -187,6 +187,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     Waypoints existing_waypoints;
 
     bool use_old_path = previous_path_size > 2; // TODO this as parameter, how much to reuse
+    std::cout << "use old path: " << use_old_path << std::endl;
     if (use_old_path) {
         existing_waypoints.addAll(state.previous_path_);
         getPoseAtEndOfPath(state.previous_path_, current_pose);
@@ -247,7 +248,6 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     double last_s =  transformed_waypoints_for_spline.getWaypoints()[transformed_waypoints_for_spline.getWaypoints().size()-1].getS();
     double s_since_last_wp = 0.0;
     double increment_x = 0.01; // TODO parameters
-    double wp_distance_s = current_velocity_;
     double current_x = first_x;
     double current_y = spline(current_x);
     double current_s = first_s;
@@ -276,7 +276,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
             break;
         }
 
-        if (s_since_last_wp > wp_distance_s) {
+        if (s_since_last_wp > current_velocity_) {
             // push intermediate waypoint
             sampled_transformed_waypoints.add(Waypoint(current_x, current_y, current_s, 0.0, 0.0)); // TODO ok that we leave dx dy empty?
             s_since_last_wp = 0.0;
@@ -284,11 +284,11 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
             //std::cout << "waypoint distance s: " << wp_distance_s << std::endl;
 
             // adjust velocity
-            if (requested_velocity > wp_distance_s) {
-                wp_distance_s += acceleration;
+            if (requested_velocity > current_velocity_) {
+                current_velocity_ += acceleration;
             }
-            else if (requested_velocity < wp_distance_s) {
-                wp_distance_s -= acceleration;
+            else if (requested_velocity < current_velocity_) {
+                current_velocity_ -= acceleration;
             }
         }
     }
@@ -307,6 +307,11 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
 
     Waypoints next_few_waypoints;
     sampled_waypoints.getNextWaypoints(current_pose, desired_path_length-previous_path_size, next_few_waypoints);
+
+    // write old path into the command TODO here?
+    existing_waypoints.toPath(command.next_path_);
+    // alternatively, just concatenate the waypoints first.
+    // or, choose a different start pose for next waypoints: the car.
 
     // write these waypoints into the command
     next_few_waypoints.toPath(command.next_path_);
