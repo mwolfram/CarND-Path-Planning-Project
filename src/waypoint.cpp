@@ -115,105 +115,28 @@ void Waypoints::toPath(Path& path) const {
     }
 }
 
-void Waypoints::getApproximateOriginAndDirection(double& ref_x, double& ref_y, double& ref_yaw) const {
+/**
+ * @brief Waypoints::getApproximateOriginAndDirection determines the approximate origin and
+ * orientation of the set of waypoints
+ * @return Car estimated pose
+ */
+const Car Waypoints::getApproximateOriginAndDirection() const {
     assert(waypoints_.size() > 1);
+
+    Car pose;
 
     int origin_index = 0;
     int target_index = waypoints_.size()-1;
 
-    ref_x = waypoints_[origin_index].getX();
-    ref_y = waypoints_[origin_index].getY();
+    pose.car_x_ = waypoints_[origin_index].getX();
+    pose.car_y_ = waypoints_[origin_index].getY();
 
     double ref_x2 = waypoints_[target_index].getX();
     double ref_y2 = waypoints_[target_index].getY();
 
-    ref_yaw = atan2( (ref_y2-ref_y),(ref_x2-ref_x) );
-}
+    pose.car_yaw_rad_ = atan2( (ref_y2-ref_y),(ref_x2-ref_x) );
 
-void Waypoints::interpolate(double& initial_gap, const double& target_gap, const unsigned int& first_waypoint_index, Waypoints& interpolated_waypoints) const {
-
-    // determine the origin and the direction of the set of waypoints
-    double ref_x, ref_y, ref_yaw;
-    getApproximateOriginAndDirection(ref_x, ref_y, ref_yaw);
-    Car reference_position;
-    reference_position.car_x_ = ref_x;
-    reference_position.car_y_ = ref_y;
-    reference_position.car_yaw_rad_ = ref_yaw;
-
-    // transform the waypoints to that frame to make sure that the X values are sorted
-    Waypoints transformed_waypoints;
-    transformToCarFrame(reference_position, transformed_waypoints);
-
-    // fit a spline to the set of transformed waypoints
-    tk::spline spline;
-    std::vector<double> x_coordinates;
-    std::vector<double> y_coordinates;
-    for (auto it = transformed_waypoints.getWaypoints().begin(); it != transformed_waypoints.getWaypoints().end(); it++) {
-        x_coordinates.push_back(it->getX());
-        y_coordinates.push_back(it->getY());
-    }
-    spline.set_points(x_coordinates, y_coordinates);
-
-    // sample interpolated waypoints from waypoints
-    double first_x = transformed_waypoints.getWaypoints()[first_waypoint_index].getX();
-    double first_s = transformed_waypoints.getWaypoints()[first_waypoint_index].getS();
-    //double last_x = transformed_waypoints.getWaypoints()[transformed_waypoints.getWaypoints().size()-1].getX();
-    double last_s = transformed_waypoints.getWaypoints()[transformed_waypoints.getWaypoints().size()-1].getS();
-    std::cout << "first_s " << first_s << std::endl;
-    std::cout << "last_s " << last_s << std::endl;
-    double s_since_last_wp = 0.0;
-    double increment_x = 0.01; // TODO parameters
-    double wp_distance_s = initial_gap;
-    double current_x = first_x;
-    double current_y = spline(current_x);
-    double current_s = first_s;
-    double acceleration = 0.01; //TODO parameters
-
-    Waypoints interpolated_transformed_waypoints;
-
-    // push first waypoint
-    //interpolated_transformed_waypoints.waypoints_.push_back(Waypoint(current_x, current_y, current_s, 0.0, 0.0)); // TODO ok that we leave dx dy empty?
-
-    int iterations = 0; // TODO debug
-    while (true) {
-
-        ++iterations; // TODO debug
-
-        double last_x = current_x;
-        double last_y = current_y;
-        current_x += increment_x;
-        current_y = spline(current_x);
-        double euclidean_distance_travelled = toolkit::distance(current_x, current_y, last_x, last_y);
-        current_s += euclidean_distance_travelled;
-        s_since_last_wp += euclidean_distance_travelled;
-
-        if (current_s >= last_s) {
-            break;
-        }
-
-        if (s_since_last_wp > wp_distance_s) {
-            // push intermediate waypoint
-            interpolated_transformed_waypoints.waypoints_.push_back(Waypoint(current_x, current_y, current_s, 0.0, 0.0)); // TODO ok that we leave dx dy empty?
-            s_since_last_wp = 0.0;
-
-            std::cout << "gap " << initial_gap << std::endl;
-
-            // adjust velocity
-            if (target_gap > initial_gap) {
-                initial_gap += acceleration;
-            }
-            else if (target_gap < initial_gap) {
-                initial_gap -= acceleration;
-            }
-        }
-    }
-
-    // push last waypoint
-    // TODO skipped: interpolated_transformed_waypoints.waypoints_.push_back(Waypoint(last_x, spline(last_x), last_s, 0.0, 0.0)); // TODO ok that we leave dx dy empty?
-
-    std::cout << iterations << " iterations." << std::endl; // TODO debug
-
-    interpolated_transformed_waypoints.transformToMapFrame(reference_position, interpolated_waypoints);
+    return pose;
 }
 
 void Waypoints::offset(const Waypoints& reference_waypoints, const double& d, Waypoints& offset_waypoints) const {

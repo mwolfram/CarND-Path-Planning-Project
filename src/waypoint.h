@@ -44,7 +44,6 @@ public:
     void add(const Waypoint& waypoint) {waypoints_.push_back(waypoint);}
     void addAll(const Waypoints& waypoints);
     void addAll(const Path& path);
-
     void readFromFile();
 
     // manipulate
@@ -52,13 +51,14 @@ public:
     void transformToMapFrame(const Car& self, Waypoints &transformed_waypoints) const;
     int getClosestWaypointIndex(const double& x, const double& y) const;
     int getNextWaypointIndex(const double& self_x, const double& self_y, const double& self_yaw_rad) const;
-    void getNextWaypoints(const Car& car, const unsigned int &amount, Waypoints& subset, const int &amount_of_previous_to_include=false) const;
+    void getNextWaypoints(const Car& car, const unsigned int &amount, Waypoints& subset, const int &amount_of_previous_to_include=0) const;
     void getRemainingWaypoints(const Car& car, Waypoints& subset) const;
     void getSubset(const unsigned int &start_index, const unsigned int& amount, Waypoints& subset) const;
     void getSubset(const unsigned int &start_index, Waypoints& subset) const;
-    void getApproximateOriginAndDirection(double& ref_x, double& ref_y, double& ref_yaw) const;
-    void interpolate(double &initial_gap, const double& target_gap, const unsigned int &first_waypoint_index, Waypoints& interpolated_waypoints) const;
+    const Car getApproximateOriginAndDirection() const;
     void offset(const Waypoints& reference_waypoints, const double& d, Waypoints &offset_waypoints) const;
+
+    // convert
     void toPath(Path& path) const;
 
     // plot

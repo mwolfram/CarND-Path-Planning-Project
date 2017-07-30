@@ -10,6 +10,7 @@
 #include "waypoint.h"
 #include "data.h"
 #include "simple_svg_1.0.0.hpp"
+#include "spline.h"
 
 using std::vector;
 using std::string;
@@ -35,6 +36,16 @@ namespace toolkit {
     static double normalize(const double angle_rad) {
         double TWO_PI = 2 * pi();
         return angle_rad - TWO_PI * floor((angle_rad + pi()) / TWO_PI );
+    }
+
+    static void fitSpline(const Waypoints& waypoints, tk::spline& spline) {
+        std::vector<double> x_coordinates;
+        std::vector<double> y_coordinates;
+        for (auto it = waypoints.getWaypoints().begin(); it != waypoints.getWaypoints().end(); it++) {
+            x_coordinates.push_back(it->getX());
+            y_coordinates.push_back(it->getY());
+        }
+        spline.set_points(x_coordinates, y_coordinates);
     }
 
 } // end of namespace toolkit

@@ -194,15 +194,11 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
         existing_path.add(Waypoint(current_pose.car_x_, current_pose.car_y_, current_pose.car_yaw_rad_, 0.0, 0.0));
     }
 
-
     // Now to the NEW part of the path. Note: at this point the existing_waypoints could be size 1 or larger
 
-    // we need to
-    // 1. determine the continuing spline
-    // 2. sample over that spline
-    // --> try to get the same behaviour as before
-
-
+    //
+    // Add future waypoints
+    //
 
     // now add future waypoints, and offset them
     // current car was the end of the previous path
@@ -218,9 +214,97 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     }
     waypoints_for_interpolation.addAll(offset_future_waypoints);
 
-    // start two points before end of last path
-    Waypoints interpolated_waypoints;
-    waypoints_for_interpolation.interpolate(current_velocity, target_velocity, path_size > 2 ? 2: 0, interpolated_waypoints);
+    //
+    // Create a spline
+    //
+
+    // determine reference pose
+    Car transformation_reference_pose = waypoints.getApproximateOriginAndDirection();
+
+    // transform the waypoints to reference_pose frame to make sure that the X values are sorted
+    Waypoints transformed_waypoints;
+    waypoints.transformToCarFrame(transformation_reference_pose, transformed_waypoints);
+
+    // fit a spline to the set of transformed waypoints
+    tk::spline spline;
+    toolkit::fitSpline(transformed_waypoints, spline);
+
+    //
+    // Sample from spline
+    //
+
+    // start N points before end of last path (first_waypoint_index)
+    /*
+    double& initial_gap,
+            const double& target_gap,
+            const unsigned int& first_waypoint_index,
+            Waypoints& interpolated_waypoints
+            */
+
+    // sample interpolated waypoints from waypoints
+    double first_x = transformed_waypoints.getWaypoints()[first_waypoint_index].getX();
+    double first_s = transformed_waypoints.getWaypoints()[first_waypoint_index].getS();
+    //double last_x = transformed_waypoints.getWaypoints()[transformed_waypoints.getWaypoints().size()-1].getX();
+    double last_s = transformed_waypoints.getWaypoints()[transformed_waypoints.getWaypoints().size()-1].getS();
+    std::cout << "first_s " << first_s << std::endl;
+    std::cout << "last_s " << last_s << std::endl;
+    double s_since_last_wp = 0.0;
+    double increment_x = 0.01; // TODO parameters
+    double wp_distance_s = initial_gap;
+    double current_x = first_x;
+    double current_y = spline(current_x);
+    double current_s = first_s;
+    double acceleration = 0.01; //TODO parameters
+
+    Waypoints interpolated_transformed_waypoints;
+
+    // push first waypoint
+    //interpolated_transformed_waypoints.waypoints_.push_back(Waypoint(current_x, current_y, current_s, 0.0, 0.0)); // TODO ok that we leave dx dy empty?
+
+    int iterations = 0; // TODO debug
+    while (true) {
+
+        ++iterations; // TODO debug
+
+        double last_x = current_x;
+        double last_y = current_y;
+        current_x += increment_x;
+        current_y = spline(current_x);
+        double euclidean_distance_travelled = toolkit::distance(current_x, current_y, last_x, last_y);
+        current_s += euclidean_distance_travelled;
+        s_since_last_wp += euclidean_distance_travelled;
+
+        if (current_s >= last_s) {
+            break;
+        }
+
+        if (s_since_last_wp > wp_distance_s) {
+            // push intermediate waypoint
+            interpolated_transformed_waypoints.waypoints_.push_back(Waypoint(current_x, current_y, current_s, 0.0, 0.0)); // TODO ok that we leave dx dy empty?
+            s_since_last_wp = 0.0;
+
+            std::cout << "gap " << initial_gap << std::endl;
+
+            // adjust velocity
+            if (target_gap > initial_gap) {
+                initial_gap += acceleration;
+            }
+            else if (target_gap < initial_gap) {
+                initial_gap -= acceleration;
+            }
+        }
+    }
+
+    //
+    // Transform back to map frame
+    //
+
+    interpolated_transformed_waypoints.transformToMapFrame(transformation_reference_pose, interpolated_waypoints);
+
+
+    //
+    // Take a fraction of the waypoints and set it as path in the command
+    //
 
     Waypoints next_few_waypoints;
     interpolated_waypoints.getNextWaypoints(current_car, 100-path_size, next_few_waypoints);
@@ -232,3 +316,4 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
 void Planner::plan(const Waypoints& waypoints, const State& state, Command& command) {
     generateTrajectory(waypoints, state, command);
 }
+
