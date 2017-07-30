@@ -60,12 +60,12 @@ int main() {
                     State state;
 
                     // Main car's localization Data
-                    state.self_.car_x_ = j[1]["x"];
-                    state.self_.car_y_ = j[1]["y"];
-                    state.self_.car_s_ = j[1]["s"];
-                    state.self_.car_d_ = j[1]["d"];
-                    state.self_.car_yaw_rad_ = toolkit::deg2rad(j[1]["yaw"]); // TODO make sure this is valid
-                    state.self_.car_speed_mps_ = toolkit::mph2mps(j[1]["speed"]);
+                    state.self_.x_ = j[1]["x"];
+                    state.self_.y_ = j[1]["y"];
+                    state.self_.s_ = j[1]["s"];
+                    state.self_.d_ = j[1]["d"];
+                    state.self_.yaw_rad_ = toolkit::deg2rad(j[1]["yaw"]); // TODO make sure this is valid
+                    state.self_.speed_mps_ = toolkit::mph2mps(j[1]["speed"]);
 
                     // Previous path data given to the Planner
                     auto previous_path_x = j[1]["previous_path_x"];
@@ -87,12 +87,12 @@ int main() {
                         auto other_car_values = *it;
                         OtherCar other;
                         other.id_ = other_car_values[0];
-                        other.car_x_ = other_car_values[1];
-                        other.car_y_ = other_car_values[2];
-                        other.car_vx_ = other_car_values[3];
-                        other.car_vy_ = other_car_values[4];
-                        other.car_s_ = other_car_values[5];
-                        other.car_d_ = other_car_values[6];
+                        other.x_ = other_car_values[1];
+                        other.y_ = other_car_values[2];
+                        other.vx_ = other_car_values[3];
+                        other.vy_ = other_car_values[4];
+                        other.s_ = other_car_values[5];
+                        other.d_ = other_car_values[6];
                         state.others_.push_back(other);
                     }
 

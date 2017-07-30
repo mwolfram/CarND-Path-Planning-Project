@@ -22,23 +22,23 @@ struct OtherCar {
     unsigned int id_;
 
     // Car's Data from Sensor Fusion
-    double car_x_;
-    double car_y_;
-    double car_vx_;
-    double car_vy_;
-    double car_s_;
-    double car_d_;
+    double x_;
+    double y_;
+    double vx_;
+    double vy_;
+    double s_;
+    double d_;
 };
 
 struct Car {
 
     // Car's localization Data
-    double car_x_;
-    double car_y_;
-    double car_s_;
-    double car_d_;
-    double car_yaw_rad_;
-    double car_speed_mps_;
+    double x_;
+    double y_;
+    double s_;
+    double d_;
+    double yaw_rad_;
+    double speed_mps_;
 };
 
 struct State {

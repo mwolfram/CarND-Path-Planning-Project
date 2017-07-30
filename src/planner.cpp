@@ -21,7 +21,7 @@ namespace {
         double car_y;
         double car_yaw;
         double path_point_distance = 0.0;
-        double car_speed_mps = state.self_.car_speed_mps_;
+        double car_speed_mps = state.self_.speed_mps_;
 
         int path_size = state.previous_path_.path_x_.size();
 
@@ -35,9 +35,9 @@ namespace {
         // analyze the path, set the car position
         if(path_size == 0)
         {
-            car_x = state.self_.car_x_;
-            car_y = state.self_.car_y_;
-            car_yaw = state.self_.car_yaw_rad_;
+            car_x = state.self_.x_;
+            car_y = state.self_.y_;
+            car_yaw = state.self_.yaw_rad_;
         }
         else
         {
@@ -96,9 +96,9 @@ namespace {
 
         if(path_size == 0)
         {
-            pos_x = state.self_.car_x_;
-            pos_y = state.self_.car_y_;
-            angle = state.self_.car_yaw_rad_;
+            pos_x = state.self_.x_;
+            pos_y = state.self_.y_;
+            angle = state.self_.yaw_rad_;
         }
         else
         {
@@ -113,7 +113,7 @@ namespace {
         double max_acceleration_mpss = 5;
         double rate = 0.02;
         double max_speed_mps = toolkit::mph2mps(50.0);
-        double next_speed_mps = state.self_.car_speed_mps_;
+        double next_speed_mps = state.self_.speed_mps_;
         if (next_speed_mps > max_speed_mps) {
             next_speed_mps = max_speed_mps;
         }
@@ -159,21 +159,20 @@ void Planner::getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path)
     const double last_position_x = old_path.path_x_[path_size-1];
     const double last_position_y = old_path.path_y_[path_size-1];
 
-    pose_at_end_of_path.car_x_ = last_position_x;
-    pose_at_end_of_path.car_y_ = last_position_y;
+    pose_at_end_of_path.x_ = last_position_x;
+    pose_at_end_of_path.y_ = last_position_y;
 
     const double intermediate_position_x = old_path.path_x_[path_size-path_points_to_consider_for_orientation];
     const double intermediate_position_y = old_path.path_y_[path_size-path_points_to_consider_for_orientation];
 
-    pose_at_end_of_path.car_yaw_rad_ = atan2(last_position_y-intermediate_position_y, last_position_x-intermediate_position_x);
+    pose_at_end_of_path.yaw_rad_ = atan2(last_position_y-intermediate_position_y, last_position_x-intermediate_position_x);
 }
 
-void Planner::generateTrajectory(const Waypoints& waypoints, const State& state, Command& command) {
+void Planner::generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity) {
 
     // configuration
     INIReader ini("configuration/default.ini");
     const double d = ini.GetReal("driving", "d", 0.0);
-    const double requested_velocity = ini.GetReal("driving", "requested_velocity", 0.0);
     const double acceleration = ini.GetReal("driving", "acceleration", 0.000001);
 
     // TODO configuration
@@ -195,7 +194,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     }
     else {
         current_pose = state.self_;
-        existing_waypoints.add(Waypoint(current_pose.car_x_, current_pose.car_y_, current_pose.car_yaw_rad_, 0.0, 0.0));
+        existing_waypoints.add(Waypoint(current_pose.x_, current_pose.y_, current_pose.yaw_rad_, 0.0, 0.0));
     }
 
     // Now to the NEW part of the path. Note: at this point the existing_waypoints could be size 1 or larger
@@ -319,20 +318,43 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
 
 void Planner::plan(const Waypoints& waypoints, const State& state, Command& command) {
 
+    INIReader ini("configuration/default.ini"); // ATTENTION! TODO this is read twice!
+    double requested_velocity = ini.GetReal("driving", "requested_velocity", 0.0);
+    double s_lookahead = ini.GetReal("safety", "s_lookahead", 50.0);
+    double s_too_close = ini.GetReal("safety", "s_too_close", 30.0);
+    double lane_width = ini.GetReal("safety", "lane_width", 4.0);
+
     const Car& self = state.self_;
 
     // iterate over other cars
     for (auto it = state.others_.begin(); it != state.others_.end(); it++) {
         const OtherCar& other = *it;
 
-        //if (other.car_d_ )
+        std::string danger = "                  ";
 
-        std::cout << other.car_s_ << " " << other.car_d_ << std::endl;
+        if (abs(self.d_ - other.d_) < lane_width ) {
+            // oh snap, the car is in the same lane
+            if (other.s_ > self.s_ && other.s_ - self.s_ < s_lookahead) {
+                // oh snap, the car is close
+                danger = "Proximity Warning!";
+                requested_velocity = std::min(requested_velocity, toolkit::distance(0, 0, other.vx_, other.vy_) * 0.02); //TODO hardcoded rate
+
+            }
+
+            if (other.s_ > self.s_ && other.s_ - self.s_ < s_too_close) {
+                // oh snap, the car is very close
+                danger = "Collision Warning!";
+                requested_velocity = std::min(requested_velocity, toolkit::distance(0, 0, other.vx_, other.vy_) * 0.015); //TODO hardcoded rate
+            }
+        }
+
+        std::cout << danger << "      " << other.s_ << " " << other.d_ << std::endl;
 
 
     }
+    std::cout << "Setting requested velocity to " << requested_velocity << std::endl;
     std::cout << "---------------------------------" << std::endl;
 
-    generateTrajectory(waypoints, state, command);
+    generateTrajectory(waypoints, state, command, requested_velocity);
 }
 

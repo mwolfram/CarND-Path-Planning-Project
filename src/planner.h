@@ -23,7 +23,7 @@ public:
     void plan(const Waypoints &waypoints, const State &state, Command &command);
 
 private:
-    void generateTrajectory(const Waypoints& waypoints, const State& state, Command& command);
+    void generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity);
     void getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path) const;
 
     svg::Document plot_;
