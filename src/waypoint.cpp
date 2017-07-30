@@ -32,16 +32,13 @@ Waypoint::Waypoint(const Waypoint &other):
  * Multiple Waypoints
  */
 Waypoints::Waypoints(const Waypoints &other):
-    waypoints_(other.waypoints_),
-    max_s_(other.max_s_)
+    waypoints_(other.waypoints_)
 {
 }
 
 void Waypoints::readFromFile() {
     // Waypoint map to read from
     string map_file = "data/highway_map.csv";
-    // The max s value before wrapping around the track back to 0
-    max_s_ = 6945.554; // TODO this has to be used when interpolating!
 
     std::ifstream in_map(map_file.c_str(), std::ifstream::in);
 
@@ -139,21 +136,6 @@ const Car Waypoints::getApproximateOriginAndDirection() const {
     return pose;
 }
 
-void Waypoints::offset(const Waypoints& reference_waypoints, const double& d, Waypoints& offset_waypoints) const {
-    for (auto it = waypoints_.begin(); it != waypoints_.end(); it++) {
-        std::vector<double> frenet_coordinates = conversion::toFrenet(it->getX(), it->getY(), it->getDX(), reference_waypoints); // TODO calculating s would not be necessary)
-        std::vector<double> xy_coordinates = conversion::toXY(frenet_coordinates[0], d, reference_waypoints);
-        Waypoint offset_waypoint(
-                    xy_coordinates[0],
-                    xy_coordinates[1],
-                    it->getS(),
-                    it->getDX(),
-                    it->getDY());
-
-        offset_waypoints.add(offset_waypoint);
-    }
-}
-
 void Waypoints::plotWaypoints(svg::Document& document) const {
 
     for (auto it = waypoints_.begin(); it != waypoints_.end(); it++) {
@@ -178,8 +160,8 @@ void Waypoints::getSubset(const unsigned int& start_index, const unsigned int &a
     // we would not want to get a subset that is larger than the original set
     assert(amount <= waypoints_.size());
 
-    for (auto i = start_index; i < start_index + amount; i = (i + 1) % waypoints_.size()) {
-        subset.waypoints_.push_back(waypoints_[i]);
+    for (auto i = start_index; i < start_index + amount; i++) {
+        subset.waypoints_.push_back(waypoints_[i % waypoints_.size()]);
     }
 }
 

@@ -146,7 +146,9 @@ Planner::Planner():
     ini_reader_("configuration/default.ini")
 {
     plot::plotAxes(plot_);
-    current_velocity_ = 0.0;
+    current_velocity_ = 0.05; // TODO hardcoded initial state
+    current_d_ = 6.0; // TODO hardcoded initial state
+    current_d_rate_ = 0.1; // TODO hardcoded initial state
 }
 
 void Planner::getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path) const {
@@ -168,16 +170,58 @@ void Planner::getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path)
     pose_at_end_of_path.yaw_rad_ = atan2(last_position_y-intermediate_position_y, last_position_x-intermediate_position_x);
 }
 
+void Planner::offset(const Waypoints& waypoints_to_manipulate, const Waypoints& reference_waypoints, const double& requested_d, Waypoints& offset_waypoints) {
+
+    // configuration
+    INIReader ini("configuration/default.ini");
+    const double d_rate_min = ini.GetReal("driving", "d_rate_min", 0.0001);
+    const double d_rate_max = ini.GetReal("driving", "d_rate_max", 0.0001);
+    const double d_rate_change = ini.GetReal("driving", "d_rate_change", 0.0001);
+
+
+    if (abs(requested_d - current_d_) > 2.0) {
+        // in the middle of lane change
+        current_d_rate_ += d_rate_change;
+    }
+    else {
+        // close to end of lane change
+        current_d_rate_ -= d_rate_change;
+    }
+
+    current_d_rate_ = std::min(current_d_rate_, d_rate_max);
+    current_d_rate_ = std::max(current_d_rate_, d_rate_min);
+
+    if (requested_d > current_d_) {
+        current_d_ += current_d_rate_;
+    }
+    else if (requested_d < current_d_) {
+        current_d_ -= current_d_rate_;
+    }
+
+    for (auto it = waypoints_to_manipulate.getWaypoints().begin(); it != waypoints_to_manipulate.getWaypoints().end(); it++) {
+        std::vector<double> frenet_coordinates = conversion::toFrenet(it->getX(), it->getY(), it->getDX(), reference_waypoints); // TODO calculating s would not be necessary)
+        std::vector<double> xy_coordinates = conversion::toXY(frenet_coordinates[0], current_d_, reference_waypoints);
+        Waypoint offset_waypoint(
+                    xy_coordinates[0],
+                    xy_coordinates[1],
+                    it->getS(),
+                    it->getDX(),
+                    it->getDY());
+
+        offset_waypoints.add(offset_waypoint);
+    }
+}
+
 void Planner::generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity) {
 
     // configuration
     INIReader ini("configuration/default.ini");
     const double d = ini.GetReal("driving", "d", 0.0);
     const double acceleration = ini.GetReal("driving", "acceleration", 0.000001);
+    const unsigned int desired_path_length = ini.GetInteger("driving", "path_length", 50);
 
     // TODO configuration
-    const unsigned int amount_of_future_waypoints = 3u;
-    const unsigned int desired_path_length = 100u;
+    const unsigned int amount_of_future_waypoints = 10u;
 
     const unsigned int previous_path_size = state.previous_path_.path_x_.size();
 
@@ -194,6 +238,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     }
     else {
         current_pose = state.self_;
+        current_velocity_ = state.self_.speed_mps_ * 0.02; // TODO hardcoded rate
         existing_waypoints.add(Waypoint(current_pose.x_, current_pose.y_, current_pose.yaw_rad_, 0.0, 0.0));
     }
 
@@ -209,7 +254,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     waypoints.getNextWaypoints(current_pose, amount_of_future_waypoints, future_waypoints);
 
     Waypoints offset_future_waypoints;
-    future_waypoints.offset(waypoints, d, offset_future_waypoints); // TODO smoothly, not like this
+    offset(future_waypoints, waypoints, d, offset_future_waypoints);
 
     Waypoints waypoints_for_spline;
     waypoints_for_spline.addAll(existing_waypoints);
@@ -246,6 +291,9 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     double first_x = first_waypoint_from_old_path.getX();
     double first_s = first_waypoint_from_old_path.getS();
     double last_s =  transformed_waypoints_for_spline.getWaypoints()[transformed_waypoints_for_spline.getWaypoints().size()-1].getS();
+    if (last_s <= first_s) {
+        last_s += toolkit::maxS();
+    }
     double s_since_last_wp = 0.0;
     double increment_x = 0.01; // TODO parameters
     double current_x = first_x;
@@ -258,8 +306,16 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
 
     Waypoints sampled_transformed_waypoints;
 
+    // adjust initial velocity
+    if (requested_velocity > current_velocity_) {
+        current_velocity_ += acceleration;
+    }
+    else if (requested_velocity < current_velocity_) {
+        current_velocity_ -= acceleration;
+    }
+
     int iterations = 0; // TODO debug
-    while (true) {
+    while (sampled_transformed_waypoints.getWaypoints().size() < desired_path_length) {
 
         ++iterations; // TODO debug
 
@@ -277,7 +333,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
 
         if (s_since_last_wp > current_velocity_) {
             // push intermediate waypoint
-            sampled_transformed_waypoints.add(Waypoint(current_x, current_y, current_s, 0.0, 0.0)); // TODO ok that we leave dx dy empty?
+            sampled_transformed_waypoints.add(Waypoint(current_x, current_y, fmod(current_s, toolkit::maxS()), 0.0, 0.0)); // TODO ok that we leave dx dy empty?
             s_since_last_wp = 0.0;
 
             //std::cout << "waypoint distance s: " << wp_distance_s << std::endl;
@@ -307,13 +363,44 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     Waypoints next_few_waypoints;
     sampled_waypoints.getNextWaypoints(current_pose, desired_path_length-previous_path_size, next_few_waypoints);
 
-    // write old path into the command TODO here?
-    existing_waypoints.toPath(command.next_path_);
-    // alternatively, just concatenate the waypoints first.
-    // or, choose a different start pose for next waypoints: the car.
+    Waypoints total_path_waypoints;
+    total_path_waypoints.addAll(existing_waypoints);
+    total_path_waypoints.addAll(next_few_waypoints);
 
-    // write these waypoints into the command
-    next_few_waypoints.toPath(command.next_path_);
+    bool is_total_path_sane = checkPathSanity(total_path_waypoints);
+
+    if (is_total_path_sane) {
+        total_path_waypoints.toPath(command.next_path_);
+    }
+    else {
+        existing_waypoints.toPath(command.next_path_);
+    }
+
+    //std::cout << "Old Path Sanity: " << checkPathSanity(existing_waypoints) << std::endl;
+    //std::cout << "Next Sanity: " << checkPathSanity(next_few_waypoints) << std::endl;
+    //std::cout << "Total Sanity: " <<  << std::endl;
+}
+
+bool Planner::checkPathSanity(const Waypoints& waypoints) const {
+    INIReader ini("configuration/default.ini");
+    const double tolerated_acceleration = ini.GetReal("driving", "tolerated_acceleration", 0.000001);
+
+    for (auto i = 2; i < waypoints.getWaypoints().size(); i++) {
+
+        auto wp3 = waypoints.getWaypoints()[i-2];
+        auto wp2 = waypoints.getWaypoints()[i-1];
+        auto wp1 = waypoints.getWaypoints()[i];
+
+        double distance1 = toolkit::distance(wp2.getX(), wp2.getY(), wp3.getX(), wp3.getY());
+        double distance2 = toolkit::distance(wp1.getX(), wp1.getY(), wp2.getX(), wp2.getY());
+
+        double actual_acceleration = fabs(distance2 - distance1);
+        if (actual_acceleration > tolerated_acceleration) {
+            std::cout << "WARNING Max Acceleration Exceeded: Actual: " << actual_acceleration << ", Tolerated: " << tolerated_acceleration << std::endl;
+            return false;
+        }
+    }
+    return true;
 }
 
 void Planner::plan(const Waypoints& waypoints, const State& state, Command& command) {

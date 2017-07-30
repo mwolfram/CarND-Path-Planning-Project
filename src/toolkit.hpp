@@ -23,6 +23,9 @@ namespace toolkit {
     constexpr double pi() { return M_PI; }
     constexpr double mph2mpsFactor() { return 0.44704; }
 
+    // The max s value before wrapping around the track back to 0
+    constexpr double maxS() { return 6945.554; }
+
     inline double deg2rad(double x) { return x * pi() / 180; }
     inline double rad2deg(double x) { return x * 180 / pi(); }
 
@@ -219,7 +222,7 @@ namespace plot {
     static void plotPath(const Path& path, svg::Document& document) {
         for (auto i = 0; i < path.path_x_.size(); i++) {
 
-            double pointSize = 3.0;
+            double pointSize = 10.0;
 
             double x = path.path_x_[i];
             double y = path.path_y_[i];

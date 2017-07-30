@@ -56,7 +56,6 @@ public:
     void getSubset(const unsigned int &start_index, const unsigned int& amount, Waypoints& subset) const;
     void getSubset(const unsigned int &start_index, Waypoints& subset) const;
     const Car getApproximateOriginAndDirection() const;
-    void offset(const Waypoints& reference_waypoints, const double& d, Waypoints &offset_waypoints) const;
 
     // convert
     void toPath(Path& path) const;
@@ -66,7 +65,6 @@ public:
 
 private:
     std::vector<Waypoint> waypoints_;
-    double max_s_;
 
 };
 

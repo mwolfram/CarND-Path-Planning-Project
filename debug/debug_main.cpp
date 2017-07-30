@@ -1,6 +1,7 @@
 #include "../src/data.h"
 #include "../src/toolkit.hpp"
 #include "../src/waypoint.h"
+#include "../src/planner.h"
 #include "../src/simple_svg_1.0.0.hpp"
 
 /*
@@ -69,8 +70,17 @@ void interpolateWholeTrack() {
     document.save();
 }
 
+*/
+void generateTrajectory(const Waypoints& waypoints, State& state, Planner& planner, Command& command, svg::Document& document) {
+    std::cout << state.self_.s_ << std::endl;
+    planner.plan(waypoints, state, command);
+    //plot::plotPath(command.next_path_, document);
+    plot::plotArrow(state.self_.x_, state.self_.y_, state.self_.yaw_rad_, document);
+    document.save();
+}
 
-void generateTrajectory() {
+
+void generateTrajectoriesAroundTheTrack() {
     svg::Document document("plot.svg",
                            svg::Layout( svg::Dimensions(6000, 8000), // was 3000 4000
                                         svg::Layout::Origin::BottomLeft,
@@ -80,49 +90,51 @@ void generateTrajectory() {
 
     Waypoints waypoints;
     waypoints.readFromFile();
-    //waypoints.plotWaypoints(document);
 
-    Waypoints waypoints_subset;
-    waypoints.getSubset(0, 10, waypoints_subset);
+    State state_start;
+    state_start.self_.x_ = 909.48;
+    state_start.self_.y_ = 1128.67;
+    state_start.self_.s_ = 124.8336;
+    state_start.self_.d_ = 6.164833;
+    state_start.self_.yaw_rad_ = 0.0;
+    state_start.self_.speed_mps_ = 0.0;
 
-    Waypoints interpolated_waypoints;
-    waypoints_subset.interpolate(3.0, 0, interpolated_waypoints);
+    State state_towards_end;
+    state_towards_end.self_.x_ = 162.952;
+    state_towards_end.self_.y_ = 2313.867;
+    state_towards_end.self_.s_ = 5522.24;
+    state_towards_end.self_.d_ = 6.272509;
+    state_towards_end.self_.yaw_rad_ = 0.0;
+    state_towards_end.self_.speed_mps_ = 0.0;
 
-    interpolated_waypoints.plotWaypoints(document);
+    Command command;
+    Planner planner;
 
-    // TODO check for double points!
+    while (true) {
+        int i = waypoints.getNextWaypointIndex(state_towards_end.self_.x_,
+                                               state_towards_end.self_.y_,
+                                               state_towards_end.self_.yaw_rad_);
 
-    Waypoints old_path;
-    const Waypoint& wp1 = interpolated_waypoints.getWaypoints()[interpolated_waypoints.getWaypoints().size()-1];
-    const Waypoint& wp2 = interpolated_waypoints.getWaypoints()[interpolated_waypoints.getWaypoints().size()-2];
-    const Waypoint& wp3 = interpolated_waypoints.getWaypoints()[interpolated_waypoints.getWaypoints().size()-3];
-    old_path.add(wp3);
-    old_path.add(wp2);
-    old_path.add(wp1);
+        generateTrajectory(waypoints, state_towards_end, planner, command, document);
 
-    Car current_car;
-    current_car.car_x_ = wp1.getX();
-    current_car.car_y_ = wp1.getY();
-    current_car.car_yaw_rad_ = atan2(wp1.getY()-wp3.getY(),wp1.getX()-wp3.getX());
+        state_towards_end.self_.x_ = waypoints.getWaypoints()[i].getX();
+        state_towards_end.self_.y_ = waypoints.getWaypoints()[i].getY();
 
-    Waypoints future_waypoints;
-    waypoints.getNextWaypoints(current_car, 3, future_waypoints); //current car was the end of the previous path
+        double x2 = waypoints.getWaypoints()[i-1].getX();
+        double y2 = waypoints.getWaypoints()[i-1].getY();
 
-    Waypoints waypoints_for_interpolation;
-    waypoints_for_interpolation.addAll(old_path);
-    waypoints_for_interpolation.addAll(future_waypoints);
+        state_towards_end.self_.yaw_rad_ = atan2(state_towards_end.self_.x_-x2, state_towards_end.self_.y_-y2);
 
-    Waypoints again_interpolated_waypoints;
-    waypoints_for_interpolation.interpolate(3.0, 2, again_interpolated_waypoints); // start two points before end of last path
+        //std::vector<double> frenet_coordinates = conversion::toFrenet(state.self_.x_, state.self_.y_, state.self_.yaw_rad_, waypoints);
 
-    again_interpolated_waypoints.plotWaypoints(document);
-
-    document.save();
+        state_towards_end.self_.s_ = waypoints.getWaypoints()[i-1].getS();
+        state_towards_end.self_.d_ = 0.0;
+    }
 }
-*/
+
 int main() {
     //debugInterpolationAndTransformation();
     //interpolateWholeTrack();
-    //generateTrajectory();
+    generateTrajectoriesAroundTheTrack();
 }
 
