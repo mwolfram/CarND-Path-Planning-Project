@@ -3,7 +3,7 @@
 // class under test
 #include "../src/waypoint.h"
 
-
+/*
 TEST_CASE( "Interpolation of waypoints works around the track", "[waypoint_interpolation]" ) {
     Waypoints waypoints;
     waypoints.readFromFile();
@@ -15,9 +15,18 @@ TEST_CASE( "Interpolation of waypoints works around the track", "[waypoint_inter
 
         Waypoints interpolated_waypoints;
         waypoints_subset.interpolate(interpolated_size, interpolated_waypoints);
+
+        // require that the last waypoint is the same as the last in subset
+        // same for the first
+        // equidistant s-wise
+        // not equidistant x-wise (dangerous assumption)
+
     }
 }
+*/
 
 // TODO try going multiple circles (going over 0-s line)
 
 // test back-transform
+
+
