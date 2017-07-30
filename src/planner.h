@@ -10,6 +10,8 @@ class Waypoint;
 class Waypoints;
 class State;
 class Command;
+class Car;
+class Path;
 
 class Planner {
 
@@ -22,6 +24,7 @@ public:
 
 private:
     void generateTrajectory(const Waypoints& waypoints, const State& state, Command& command);
+    void getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path) const;
 
     svg::Document plot_;
     INIReader ini_reader_;

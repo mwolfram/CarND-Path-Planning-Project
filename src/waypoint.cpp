@@ -134,7 +134,7 @@ const Car Waypoints::getApproximateOriginAndDirection() const {
     double ref_x2 = waypoints_[target_index].getX();
     double ref_y2 = waypoints_[target_index].getY();
 
-    pose.car_yaw_rad_ = atan2( (ref_y2-ref_y),(ref_x2-ref_x) );
+    pose.car_yaw_rad_ = atan2( (ref_y2-pose.car_y_),(ref_x2-pose.car_x_) );
 
     return pose;
 }
