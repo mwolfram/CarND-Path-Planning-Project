@@ -146,7 +146,7 @@ Planner::Planner():
     ini_reader_("configuration/default.ini")
 {
     plot::plotAxes(plot_);
-    current_velocity_ = ini_reader_.GetReal("driving", "speed", 0.4); // TODO, no, this will be set by the car first
+    current_velocity_ = 0.0;
 }
 
 void Planner::getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path) const {
@@ -174,6 +174,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     INIReader ini("configuration/default.ini");
     const double d = ini.GetReal("driving", "d", 0.0);
     const double requested_velocity = ini.GetReal("driving", "requested_velocity", 0.0);
+    const double acceleration = ini.GetReal("driving", "acceleration", 0.000001);
 
     // TODO configuration
     const unsigned int amount_of_future_waypoints = 3u;
@@ -187,7 +188,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     Waypoints existing_waypoints;
 
     bool use_old_path = previous_path_size > 2; // TODO this as parameter, how much to reuse
-    std::cout << "use old path: " << use_old_path << std::endl;
+    //std::cout << "use old path: " << use_old_path << std::endl;
     if (use_old_path) {
         existing_waypoints.addAll(state.previous_path_);
         getPoseAtEndOfPath(state.previous_path_, current_pose);
@@ -251,11 +252,10 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     double current_x = first_x;
     double current_y = spline(current_x);
     double current_s = first_s;
-    double acceleration = 0.01; //TODO parameters
 
-    std::cout << "DEBUG RANGE AND STEP: " << std::endl;
-    std::cout << "first_s " << first_s << std::endl;
-    std::cout << "last_s " << last_s << std::endl;
+    //std::cout << "DEBUG RANGE AND STEP: " << std::endl;
+    //std::cout << "first_s " << first_s << std::endl;
+    //std::cout << "last_s " << last_s << std::endl;
 
     Waypoints sampled_transformed_waypoints;
 
@@ -318,6 +318,21 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
 }
 
 void Planner::plan(const Waypoints& waypoints, const State& state, Command& command) {
+
+    const Car& self = state.self_;
+
+    // iterate over other cars
+    for (auto it = state.others_.begin(); it != state.others_.end(); it++) {
+        const OtherCar& other = *it;
+
+        //if (other.car_d_ )
+
+        std::cout << other.car_s_ << " " << other.car_d_ << std::endl;
+
+
+    }
+    std::cout << "---------------------------------" << std::endl;
+
     generateTrajectory(waypoints, state, command);
 }
 

@@ -85,14 +85,14 @@ int main() {
                     auto sensor_fusion = j[1]["sensor_fusion"];
                     for (auto it = sensor_fusion.begin(); it != sensor_fusion.end(); it++) {
                         auto other_car_values = *it;
-                        Car other;
+                        OtherCar other;
                         other.id_ = other_car_values[0];
                         other.car_x_ = other_car_values[1];
                         other.car_y_ = other_car_values[2];
-                        other.car_s_ = other_car_values[3];
-                        other.car_d_ = other_car_values[4];
-                        other.car_yaw_rad_ = other_car_values[5];
-                        other.car_speed_mps_ = other_car_values[6];
+                        other.car_vx_ = other_car_values[3];
+                        other.car_vy_ = other_car_values[4];
+                        other.car_s_ = other_car_values[5];
+                        other.car_d_ = other_car_values[6];
                         state.others_.push_back(other);
                     }
 

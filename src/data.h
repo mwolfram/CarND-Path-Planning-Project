@@ -15,10 +15,22 @@ struct Path {
 
 };
 
-struct Car {
+// TODO this calls for a Pose struct
 
+struct OtherCar {
     // Car's ID
     unsigned int id_;
+
+    // Car's Data from Sensor Fusion
+    double car_x_;
+    double car_y_;
+    double car_vx_;
+    double car_vy_;
+    double car_s_;
+    double car_d_;
+};
+
+struct Car {
 
     // Car's localization Data
     double car_x_;
@@ -33,7 +45,7 @@ struct State {
 
     Car self_;
     Path previous_path_;
-    std::vector<Car> others_;
+    std::vector<OtherCar> others_;
 
 };
 
