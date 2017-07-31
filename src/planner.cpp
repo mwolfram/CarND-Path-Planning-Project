@@ -282,7 +282,6 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
         last_s += toolkit::maxS();
     }
     double s_since_last_wp = 0.0;
-    double increment_x = current_velocity_ / 50.0; // TODO parameters
     double current_x = first_x;
     double current_y = spline(current_x);
     double current_s = first_s;
@@ -300,6 +299,8 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     else if (requested_velocity < current_velocity_) {
         current_velocity_ -= acceleration;
     }
+
+    double increment_x = current_velocity_ / 50.0; // TODO parameters
 
     int iterations = 0; // TODO debug
     while (sampled_transformed_waypoints.getWaypoints().size() + previous_path_size < desired_path_length) {
@@ -333,7 +334,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
                 current_velocity_ -= acceleration;
             }
 
-            increment_x = current_velocity_ / 50.0;
+            increment_x = std::max(acceleration / 50.0, current_velocity_ / 50.0);
         }
     }
 
