@@ -3,6 +3,7 @@
 
 namespace svg {
     class Document;
+    class Color;
 }
 
 class Car;
@@ -61,7 +62,7 @@ public:
     void toPath(Path& path) const;
 
     // plot
-    void plotWaypoints(svg::Document& document) const;
+    void plotWaypoints(svg::Document& document, svg::Color color) const;
 
 private:
     std::vector<Waypoint> waypoints_;

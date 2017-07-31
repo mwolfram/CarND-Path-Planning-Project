@@ -19,7 +19,7 @@ TEST_CASE( "Create a waypoint plot", "[waypoint-plot]" ) {
     svg::Document document("/tmp/plot.svg", svg::Layout(svg::Dimensions(3000, 4000)));
     Waypoints waypoints;
     waypoints.readFromFile();
-    waypoints.plotWaypoints(document);
+    waypoints.plotWaypoints(document, svg::Color(255,0,0));
     document.save();
     // TODO assert
 }

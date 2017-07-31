@@ -91,6 +91,7 @@ void generateTrajectoriesAroundTheTrack() {
     Waypoints waypoints;
     waypoints.readFromFile();
 
+    /*
     State state_start;
     state_start.self_.x_ = 909.48;
     state_start.self_.y_ = 1128.67;
@@ -98,43 +99,78 @@ void generateTrajectoriesAroundTheTrack() {
     state_start.self_.d_ = 6.164833;
     state_start.self_.yaw_rad_ = 0.0;
     state_start.self_.speed_mps_ = 0.0;
+    */
 
-    State state_towards_end;
-    state_towards_end.self_.x_ = 162.952;
-    state_towards_end.self_.y_ = 2313.867;
-    state_towards_end.self_.s_ = 5522.24;
-    state_towards_end.self_.d_ = 6.272509;
-    state_towards_end.self_.yaw_rad_ = 0.0;
-    state_towards_end.self_.speed_mps_ = 0.0;
+    State state_start;
+    state_start.self_.x_ = 1417;
+    state_start.self_.y_ = 2942;
+    state_start.self_.s_ = 3905;
+    state_start.self_.d_ = 1.98;
+    state_start.self_.yaw_rad_ = 3.1415926;
+    state_start.self_.speed_mps_ = 20.0;
+
+    /*
+    State state_start;
+    state_start.self_.x_ = 162.952;
+    state_start.self_.y_ = 2313.867;
+    state_start.self_.s_ = 5522.24;
+    state_start.self_.d_ = 6.272509;
+    state_start.self_.yaw_rad_ = 0.0;
+    state_start.self_.speed_mps_ = 0.0;
+    */
 
     Command command;
     Planner planner;
 
-    while (true) {
-        int i = waypoints.getNextWaypointIndex(state_towards_end.self_.x_,
-                                               state_towards_end.self_.y_,
-                                               state_towards_end.self_.yaw_rad_);
+    //while (true) {
+        int i = waypoints.getNextWaypointIndex(state_start.self_.x_,
+                                               state_start.self_.y_,
+                                               state_start.self_.yaw_rad_);
 
-        generateTrajectory(waypoints, state_towards_end, planner, command, document);
+        generateTrajectory(waypoints, state_start, planner, command, document);
 
-        state_towards_end.self_.x_ = waypoints.getWaypoints()[i].getX();
-        state_towards_end.self_.y_ = waypoints.getWaypoints()[i].getY();
+        state_start.self_.x_ = waypoints.getWaypoints()[i].getX();
+        state_start.self_.y_ = waypoints.getWaypoints()[i].getY();
 
         double x2 = waypoints.getWaypoints()[i-1].getX();
         double y2 = waypoints.getWaypoints()[i-1].getY();
 
-        state_towards_end.self_.yaw_rad_ = atan2(state_towards_end.self_.x_-x2, state_towards_end.self_.y_-y2);
+        state_start.self_.yaw_rad_ = atan2(state_start.self_.x_-x2, state_start.self_.y_-y2);
 
         //std::vector<double> frenet_coordinates = conversion::toFrenet(state.self_.x_, state.self_.y_, state.self_.yaw_rad_, waypoints);
 
-        state_towards_end.self_.s_ = waypoints.getWaypoints()[i-1].getS();
-        state_towards_end.self_.d_ = 0.0;
-    }
+        state_start.self_.s_ = waypoints.getWaypoints()[i-1].getS();
+        state_start.self_.d_ = 0.0;
+
+
+    //}
+}
+
+void drawWaypointsAtOffset() {
+    svg::Document document("plot.svg",
+                           svg::Layout( svg::Dimensions(6000, 8000), // was 3000 4000
+                                        svg::Layout::Origin::BottomLeft,
+                                        1,
+                                        svg::Point(3000, 4000))); // was 200 200
+    plot::plotAxes(document);
+
+    Waypoints waypoints;
+    waypoints.readFromFile();
+
+    waypoints.plotWaypoints(document, svg::Color(0, 0, 255));
+
+    Planner planner;
+    Waypoints offset_waypoints;
+    planner.offset(waypoints, waypoints, 20.0, offset_waypoints);
+
+    offset_waypoints.plotWaypoints(document, svg::Color(255, 0, 0));
+    document.save();
 }
 
 int main() {
     //debugInterpolationAndTransformation();
     //interpolateWholeTrack();
-    generateTrajectoriesAroundTheTrack();
+    //generateTrajectoriesAroundTheTrack();
+    drawWaypointsAtOffset();
 }
 

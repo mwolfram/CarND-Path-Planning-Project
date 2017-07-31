@@ -136,12 +136,12 @@ const Car Waypoints::getApproximateOriginAndDirection() const {
     return pose;
 }
 
-void Waypoints::plotWaypoints(svg::Document& document) const {
+void Waypoints::plotWaypoints(svg::Document& document, svg::Color color) const {
 
     for (auto it = waypoints_.begin(); it != waypoints_.end(); it++) {
 
         float change_in_size = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX/15));
-        double pointSize = 3.0;// - change_in_size;
+        double pointSize = 20.0;// - change_in_size;
 
         double x = it->getX();
         double y = it->getY();
@@ -149,7 +149,7 @@ void Waypoints::plotWaypoints(svg::Document& document) const {
         svg::Circle circle(svg::Point(x, y),
                            pointSize,
                            svg::Fill(svg::Color::Transparent),
-                           svg::Stroke(1, svg::Color(255,0,0)));
+                           svg::Stroke(10, color));
 
         document << circle;
     }

@@ -23,20 +23,17 @@ public:
     void plan(const Waypoints &waypoints, const State &state, Command &command);
 
     bool checkPathSanity(const Waypoints& waypoints) const;
+    void getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path) const;
+    void offset(const Waypoints& waypoints_to_manipulate, const Waypoints& reference_waypoints, const double& requested_d, Waypoints& offset_waypoints) const;
 
 private:
     void generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity);
-    void getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path) const;
-    void offset(const Waypoints& waypoints_to_manipulate, const Waypoints& reference_waypoints, const double& requested_d, Waypoints& offset_waypoints);
 
     svg::Document plot_;
     INIReader ini_reader_;
 
+    // TODO can we can rid of this? should we?
     double current_velocity_;
-    double current_d_;
-    double current_d_rate_;
-    double current_acceleration_;
-    double current_jerk_;
 
 };
 

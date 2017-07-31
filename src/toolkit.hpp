@@ -156,6 +156,9 @@ namespace conversion {
     // Transform from Frenet s,d coordinates to Cartesian x,y
     static vector<double> toXY(double s, double d, const Waypoints& waypoints)
     {
+        // XXX hack: increase s by a small amount, to avoid an error at the first wp
+        s += 0.0000000001;
+
         // for the sake of legibility
         auto wp = waypoints.getWaypoints();
 
