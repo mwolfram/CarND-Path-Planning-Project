@@ -7,132 +7,43 @@
 #include "data.h"
 #include "simple_svg_1.0.0.hpp"
 
+
 namespace {
 
-    void goForward(const State& state, Command& command) {
+    int dToLane(double d) {
+        double distance0 = fabs(d - 2.0);
+        double distance1 = fabs(d - 6.0);
+        double distance2 = fabs(d - 10.0);
 
-        // configuration
-        const double max_acceleration_mpss = 5;
-        const double rate = 0.02;
-        const double max_speed_mps = toolkit::mph2mps(49.0);
-
-
-        double car_x;
-        double car_y;
-        double car_yaw;
-        double path_point_distance = 0.0;
-        double car_speed_mps = state.self_.speed_mps_;
-
-        int path_size = state.previous_path_.path_x_.size();
-
-        // fill the new path with the points from the old path
-        for(int i = 0; i < path_size; i++)
-        {
-            command.next_path_.path_x_.push_back(state.previous_path_.path_x_[i]);
-            command.next_path_.path_y_.push_back(state.previous_path_.path_y_[i]);
+        int lane = 0;
+        double min_distance = 100000000.0; // TODO
+        if (distance0 < min_distance) {
+            lane = 0;
+            min_distance = distance0;
+        }
+        if (distance1 < min_distance) {
+            lane = 1;
+            min_distance = distance1;
+        }
+        if (distance2 < min_distance) {
+            lane = 2;
+            min_distance = distance2;
         }
 
-        // analyze the path, set the car position
-        if(path_size == 0)
-        {
-            car_x = state.self_.x_;
-            car_y = state.self_.y_;
-            car_yaw = state.self_.yaw_rad_;
-        }
-        else
-        {
-            car_x = state.previous_path_.path_x_[path_size-1];
-            car_y = state.previous_path_.path_y_[path_size-1];
-
-            double pos_x2 = state.previous_path_.path_x_[path_size-2];
-            double pos_y2 = state.previous_path_.path_y_[path_size-2];
-
-            path_point_distance = toolkit::distance(car_x, car_y, pos_x2, pos_y2);
-            car_speed_mps = path_point_distance / rate;
-
-            car_yaw = atan2(car_y-pos_y2,car_x-pos_x2);
-        }
-
-
-        // now to the NEW part of the path
-
-        double next_speed_mps = car_speed_mps;
-        if (next_speed_mps > max_speed_mps) {
-            next_speed_mps = max_speed_mps;
-        }
-
-        std::cout << "new " << 101-path_size << std::endl;
-
-        path_point_distance = next_speed_mps * rate;
-        for(int i = 0; i < 100-path_size; i++) {
-
-            command.next_path_.path_x_.push_back(car_x+(path_point_distance)*cos(car_yaw));
-            command.next_path_.path_y_.push_back(car_y+(path_point_distance)*sin(car_yaw));
-
-            // increase speed for next timestep
-            next_speed_mps += max_acceleration_mpss * rate;
-            if (next_speed_mps > max_speed_mps) {
-                next_speed_mps = max_speed_mps;
-            }
-            path_point_distance += next_speed_mps * rate;
-
-            //std::cout << path_point_distance << " ";
-        }
-        //std::cout << std::endl << std::endl;
+        return lane;
     }
 
-    void goInCircle(const State& state, Command& command) {
-
-        double pos_x;
-        double pos_y;
-        double angle;
-        int path_size = state.previous_path_.path_x_.size();
-
-        for(int i = 0; i < path_size; i++)
-        {
-            command.next_path_.path_x_.push_back(state.previous_path_.path_x_[i]);
-            command.next_path_.path_y_.push_back(state.previous_path_.path_y_[i]);
+    double laneToD(int lane) {
+        if (lane == 0) {
+            return 2.2;
         }
-
-        if(path_size == 0)
-        {
-            pos_x = state.self_.x_;
-            pos_y = state.self_.y_;
-            angle = state.self_.yaw_rad_;
+        else if (lane == 1) {
+            return 6.0;
         }
-        else
-        {
-            pos_x = state.previous_path_.path_x_[path_size-1];
-            pos_y = state.previous_path_.path_y_[path_size-1];
-
-            double pos_x2 = state.previous_path_.path_x_[path_size-2];
-            double pos_y2 = state.previous_path_.path_y_[path_size-2];
-            angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
+        else if (lane == 2) {
+            return 9.8;
         }
-
-        double max_acceleration_mpss = 5;
-        double rate = 0.02;
-        double max_speed_mps = toolkit::mph2mps(50.0);
-        double next_speed_mps = state.self_.speed_mps_;
-        if (next_speed_mps > max_speed_mps) {
-            next_speed_mps = max_speed_mps;
-        }
-
-        double path_point_distance = 0.0;
-        for(int i = 0; i < 50-path_size; i++)
-        {
-            command.next_path_.path_x_.push_back(pos_x+(path_point_distance)*cos(angle+(i+1)*(toolkit::pi()/100)));
-            command.next_path_.path_y_.push_back(pos_y+(path_point_distance)*sin(angle+(i+1)*(toolkit::pi()/100)));
-            pos_x += (path_point_distance)*cos(angle+(i+1)*(toolkit::pi()/100));
-            pos_y += (path_point_distance)*sin(angle+(i+1)*(toolkit::pi()/100));
-
-            // increase speed for next timestep
-            next_speed_mps += max_acceleration_mpss * rate;
-            if (next_speed_mps > max_speed_mps) {
-                next_speed_mps = max_speed_mps;
-            }
-            path_point_distance += next_speed_mps * rate;
-        }
+        return 50.0; // TODO not nice, but shows if there is an error
     }
 
 }
@@ -143,7 +54,9 @@ Planner::Planner():
                       svg::Layout::Origin::BottomLeft,
                       1,
                       svg::Point(3000, 4000))),
-    ini_reader_("configuration/default.ini")
+    ini_reader_("configuration/default.ini"),
+    behaviour_(KEEP_LANE),
+    requested_d(6.0)
 {
     plot::plotAxes(plot_);
 }
@@ -199,16 +112,17 @@ void Planner::offset(const Waypoints& waypoints_to_manipulate, const Waypoints& 
     }
 }
 
-void Planner::generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity) {
+void Planner::generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity, double requested_d) {
 
     // configuration
     INIReader ini("configuration/default.ini");
-    const double d = ini.GetReal("driving", "d", 0.0);
     const double acceleration = ini.GetReal("driving", "acceleration", 0.000001);
     const unsigned int desired_path_length = ini.GetInteger("driving", "path_length", 50);
-
     // TODO configuration
     const unsigned int amount_of_future_waypoints = 10u;
+
+
+    const double d = requested_d;
 
     const unsigned int previous_path_size = state.previous_path_.path_x_.size();
 
@@ -395,35 +309,45 @@ bool Planner::checkPathSanity(const Waypoints& waypoints) const {
     return true;
 }
 
-void Planner::plan(const Waypoints& waypoints, const State& state, Command& command) {
+// TODO cleanup
+void Planner::planBehavior(State state, double& requested_velocity, double lane_width) {
 
     INIReader ini("configuration/default.ini"); // ATTENTION! TODO this is read twice!
-    double requested_velocity = ini.GetReal("driving", "requested_velocity", 0.0);
-    double s_lookahead = ini.GetReal("safety", "s_lookahead", 50.0);
-    double s_too_close = ini.GetReal("safety", "s_too_close", 30.0);
-    double lane_width = ini.GetReal("safety", "lane_width", 4.0);
+    double vel_lane_change = ini.GetReal("driving", "vel_lane_change", 0.35);
+    const double s_lookahead = ini.GetReal("safety", "s_lookahead", 50.0);
+    const double s_too_close = ini.GetReal("safety", "s_too_close", 30.0);
+
 
     const Car& self = state.self_;
 
-    // iterate over other cars
+    double drive_slower_before_colliding_factor = 0.75;
+
+    bool try_to_switch_lanes = false;
+
+    // Finished Lane Change
+    if (abs(requested_d-self.d_) < lane_width/2.0) {
+        behaviour_ = KEEP_LANE;
+    }
+
+    // Check Velocity and whether we want to change lanes
     for (auto it = state.others_.begin(); it != state.others_.end(); it++) {
         const OtherCar& other = *it;
 
-        std::string danger = "                  ";
+        std::string danger = other.renderDistance(self.s_);
 
         if (abs(self.d_ - other.d_) < lane_width ) {
-            // oh snap, the car is in the same lane
             if (other.s_ > self.s_ && other.s_ - self.s_ < s_lookahead) {
-                // oh snap, the car is close
-                danger = "Proximity Warning!";
-                requested_velocity = std::min(requested_velocity, toolkit::distance(0, 0, other.vx_, other.vy_) * 0.02); //TODO hardcoded rate
-
+                requested_velocity = std::min(requested_velocity, toolkit::distance(0, 0, other.vx_, other.vy_) * toolkit::rate());
+                if (requested_velocity < vel_lane_change && behaviour_ != LANE_CHANGE) {
+                    try_to_switch_lanes = true;
+                }
             }
 
             if (other.s_ > self.s_ && other.s_ - self.s_ < s_too_close) {
-                // oh snap, the car is very close
-                danger = "Collision Warning!";
-                requested_velocity = std::min(requested_velocity, toolkit::distance(0, 0, other.vx_, other.vy_) * 0.015); //TODO hardcoded rate
+                requested_velocity = std::min(requested_velocity, toolkit::distance(0, 0, other.vx_, other.vy_) * toolkit::rate() * drive_slower_before_colliding_factor);
+                if (requested_velocity < vel_lane_change  && behaviour_ != LANE_CHANGE) {
+                    try_to_switch_lanes = true;
+                }
             }
         }
 
@@ -431,9 +355,49 @@ void Planner::plan(const Waypoints& waypoints, const State& state, Command& comm
 
 
     }
-    std::cout << "Setting requested velocity to " << requested_velocity << std::endl;
+
+    if (try_to_switch_lanes) {
+
+        int my_lane = dToLane(self.d_);
+
+        // TODO check if the other lanes are actually free
+
+        int target_lane = my_lane - 1;
+        if (my_lane == 0) {
+            target_lane = 1;
+        }
+
+        requested_d = laneToD(target_lane);
+        behaviour_ = LANE_CHANGE;
+        // implement the lane switch here
+    }
+
+
+    std::cout << "Setting requested velocity to " << requested_velocity << " and the requested d to " << requested_d << std::endl;
     std::cout << "---------------------------------" << std::endl;
 
-    generateTrajectory(waypoints, state, command, requested_velocity);
+    //if we are in the desired lane, which is the center of the lane +/- X,
+    // --> KEEP_LANE
+
+    //else if car in front and slow.
+
+    // can we change left/right?
+    // do we have more space forward there?
+
+
+
+}
+
+// TODO cleanup
+void Planner::plan(const Waypoints& waypoints, const State& state, Command& command) {
+
+    INIReader ini("configuration/default.ini"); // ATTENTION! TODO this is read twice!
+    double requested_velocity = ini.GetReal("driving", "requested_velocity", 0.0);
+    //double requested_d = ini.GetReal("driving", "d", 0.0);
+    const double lane_width = ini.GetReal("safety", "lane_width", 4.0);
+
+    planBehavior(state, requested_velocity, lane_width);
+
+    generateTrajectory(waypoints, state, command, requested_velocity, requested_d);
 }
 

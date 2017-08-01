@@ -13,6 +13,11 @@ class Command;
 class Car;
 class Path;
 
+enum Behaviour {
+    KEEP_LANE,
+    LANE_CHANGE
+};
+
 class Planner {
 
 public:
@@ -27,13 +32,17 @@ public:
     void offset(const Waypoints& waypoints_to_manipulate, const Waypoints& reference_waypoints, const double& requested_d, Waypoints& offset_waypoints) const;
 
 private:
-    void generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity);
+    void generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity, double requested_d);
+    void planBehavior(State state, double& requested_velocity, double lane_width);
 
     svg::Document plot_;
     INIReader ini_reader_;
 
     // TODO can we can rid of this? should we?
     double current_velocity_;
+    double requested_d; // TODO code style
+
+    Behaviour behaviour_;
 
 };
 

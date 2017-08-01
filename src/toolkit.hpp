@@ -22,6 +22,7 @@ namespace toolkit {
 
     constexpr double pi() { return M_PI; }
     constexpr double mph2mpsFactor() { return 0.44704; }
+    constexpr double rate() { return 0.02; }
 
     // The max s value before wrapping around the track back to 0
     constexpr double maxS() { return 6945.554; }
