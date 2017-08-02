@@ -91,8 +91,8 @@ InternalState Planner::generateTrajectory(const Waypoints& waypoints, const Stat
     future_waypoints.getSubset(1, future_waypoints_with_first_omitted);
 
     Waypoints offset_future_waypoints;
-    //TODO use this: setD(future_waypoints_with_first_omitted, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
-    setD(future_waypoints, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
+    /*TODO use this:*/ setD(future_waypoints_with_first_omitted, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
+    //setD(future_waypoints, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
 
     Waypoints waypoints_for_spline;
     waypoints_for_spline.addAll(existing_waypoints);

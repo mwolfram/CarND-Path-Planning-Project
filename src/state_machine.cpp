@@ -57,7 +57,7 @@ namespace {
             Lane others_lane = dToLane(other.d_);
             if (others_lane == lane) {
                 double offset = other.s_ - state.self_.s_;
-                if (offset > -lane_free_backward || offset < lane_free_forward) {
+                if (offset > -lane_free_backward && offset < lane_free_forward) {
                     return false;
                 }
             }
@@ -108,15 +108,15 @@ InternalState StateMachine::step(State state, const InternalState& internal_stat
     case KEEP_LANE:
         if (internal_state.getVelocityLimit() < vel_lane_change) {
             std::vector<Lane> candidates = getCandidates(current_lane_);
-            auto it = candidates.begin();
-            while (it != candidates.end()) {
+            std::vector<Lane> tmp_candidates;
+
+            for (auto it = candidates.begin(); it != candidates.end(); it++) {
                 if (isLaneFree(state, *it, configuration)) {
-                    it++;
-                }
-                else {
-                    candidates.erase(it++);
+                    tmp_candidates.push_back(*it);
                 }
             }
+
+            candidates = tmp_candidates;
 
             if (!candidates.empty()) {
                 current_node_ = CHANGE_LANE;
