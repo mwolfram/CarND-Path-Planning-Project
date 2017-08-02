@@ -54,7 +54,6 @@ Planner::Planner():
                       svg::Layout::Origin::BottomLeft,
                       1,
                       svg::Point(3000, 4000))),
-    ini_reader_("configuration/default.ini"),
     behaviour_(KEEP_LANE),
     requested_d(6.0)
 {
@@ -112,17 +111,17 @@ void Planner::offset(const Waypoints& waypoints_to_manipulate, const Waypoints& 
     }
 }
 
-void Planner::generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity, double requested_d) {
+// TODO get rid of requested fields, just pass a PlanningSettings
+void Planner::generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity) {
 
     // configuration
-    INIReader ini("configuration/default.ini");
-    const double acceleration = ini.GetReal("driving", "acceleration", 0.000001);
-    const unsigned int desired_path_length = ini.GetInteger("driving", "path_length", 50);
-    // TODO configuration
-    const unsigned int amount_of_future_waypoints = 10u;
+    Configuration configuration;
+    const double acceleration = configuration.getAcceleration();
+    const double tolerated_acceleration = configuration.getToleratedAcceleration();
+    const unsigned int desired_path_length = configuration.getPathLength();
+    const unsigned int amount_of_future_waypoints = configuration.getAmountOfFutureWaypoints();
+    // configuration ends here
 
-
-    const double d = requested_d;
 
     const unsigned int previous_path_size = state.previous_path_.path_x_.size();
 
@@ -139,7 +138,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     }
     else {
         current_pose = state.self_;
-        current_velocity_ = state.self_.speed_mps_ * 0.02; // TODO hardcoded rate
+        current_velocity_ = state.self_.speed_mps_ * toolkit::rate();
         existing_waypoints.add(Waypoint(current_pose.x_, current_pose.y_, current_pose.s_, 0.0, 0.0));
     }
 
@@ -155,7 +154,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     waypoints.getNextWaypoints(current_pose, amount_of_future_waypoints, future_waypoints);
 
     Waypoints offset_future_waypoints;
-    offset(future_waypoints, waypoints, d, offset_future_waypoints);
+    offset(future_waypoints, waypoints, requested_d, offset_future_waypoints);
 
     Waypoints waypoints_for_spline;
     waypoints_for_spline.addAll(existing_waypoints);
@@ -273,7 +272,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     total_path_waypoints.addAll(existing_waypoints);
     total_path_waypoints.addAll(sampled_waypoints);
 
-    bool is_total_path_sane = checkPathSanity(total_path_waypoints);
+    bool is_total_path_sane = checkPathSanity(total_path_waypoints, tolerated_acceleration);
 
     if (is_total_path_sane) {
         total_path_waypoints.toPath(command.next_path_);
@@ -287,10 +286,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     //std::cout << "Total Sanity: " <<  << std::endl;
 }
 
-bool Planner::checkPathSanity(const Waypoints& waypoints) const {
-    INIReader ini("configuration/default.ini");
-    const double tolerated_acceleration = ini.GetReal("driving", "tolerated_acceleration", 0.000001);
-
+bool Planner::checkPathSanity(const Waypoints& waypoints, double tolerated_acceleration) const {
     for (auto i = 2; i < waypoints.getWaypoints().size(); i++) {
 
         auto wp3 = waypoints.getWaypoints()[i-2];
@@ -310,12 +306,13 @@ bool Planner::checkPathSanity(const Waypoints& waypoints) const {
 }
 
 // TODO cleanup
-void Planner::planBehavior(State state, double& requested_velocity, double lane_width) {
+void Planner::planBehavior(State state, double& requested_velocity) {
 
-    INIReader ini("configuration/default.ini"); // ATTENTION! TODO this is read twice!
-    double vel_lane_change = ini.GetReal("driving", "vel_lane_change", 0.35);
-    const double s_lookahead = ini.GetReal("safety", "s_lookahead", 50.0);
-    const double s_too_close = ini.GetReal("safety", "s_too_close", 30.0);
+    Configuration configuration; // ATTENTION! TODO this is read multiple times!
+    double vel_lane_change = configuration.getVelocityForLaneChange();
+    const double s_lookahead = configuration.getLookaheadInS();
+    const double s_too_close = configuration.getTooCloseDistanceInS();
+    const double lane_width = configuration.getLaneWidthToConsider();
 
 
     const Car& self = state.self_;
@@ -391,13 +388,11 @@ void Planner::planBehavior(State state, double& requested_velocity, double lane_
 // TODO cleanup
 void Planner::plan(const Waypoints& waypoints, const State& state, Command& command) {
 
-    INIReader ini("configuration/default.ini"); // ATTENTION! TODO this is read twice!
-    double requested_velocity = ini.GetReal("driving", "requested_velocity", 0.0);
-    //double requested_d = ini.GetReal("driving", "d", 0.0);
-    const double lane_width = ini.GetReal("safety", "lane_width", 4.0);
+    Configuration configuration;
+    double requested_velocity = configuration.getRequestedVelocity();
 
-    planBehavior(state, requested_velocity, lane_width);
+    planBehavior(state, requested_velocity);
 
-    generateTrajectory(waypoints, state, command, requested_velocity, requested_d);
+    generateTrajectory(waypoints, state, command, requested_velocity);
 }
 

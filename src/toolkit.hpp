@@ -20,6 +20,9 @@ using std::string;
  */
 namespace toolkit {
 
+    const static std::string MAP_FILE = "data/highway_map.csv";
+    const static std::string CONFIG_FILE = "configuration/default.ini";
+
     constexpr double pi() { return M_PI; }
     constexpr double mph2mpsFactor() { return 0.44704; }
     constexpr double rate() { return 0.02; }
@@ -68,7 +71,6 @@ namespace transform {
      * @param refy
      * @param refpsi
      */
-    // TODO rename to tf?
     static void toCarFrame(double& ptx, double& pty, const double& refx, const double& refy, const double& refpsi) {
         double deltaX = ptx - refx;
         double deltaY = pty - refy;
@@ -86,7 +88,6 @@ namespace transform {
      * @param refy
      * @param refpsi
      */
-    // TODO rename to inverse tf?
     static void toMapFrame(double& ptx, double& pty, const double& refx, const double& refy, const double& refpsi) {
         double inverse_refx = 0.0;
         double inverse_refy = 0.0;
@@ -178,7 +179,7 @@ namespace conversion {
         double seg_x = wp[prev_wp].getX()+seg_s*cos(heading);
         double seg_y = wp[prev_wp].getY()+seg_s*sin(heading);
 
-        double perp_heading = heading-toolkit::pi()/2; // TODO normalization necessary here?
+        double perp_heading = heading-toolkit::pi()/2;
 
         double x = seg_x + d*cos(perp_heading);
         double y = seg_y + d*sin(perp_heading);

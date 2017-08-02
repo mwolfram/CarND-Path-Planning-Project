@@ -64,7 +64,7 @@ int main() {
                     state.self_.y_ = j[1]["y"];
                     state.self_.s_ = j[1]["s"];
                     state.self_.d_ = j[1]["d"];
-                    state.self_.yaw_rad_ = toolkit::deg2rad(j[1]["yaw"]); // TODO make sure this is valid
+                    state.self_.yaw_rad_ = toolkit::deg2rad(j[1]["yaw"]);
                     state.self_.speed_mps_ = toolkit::mph2mps(j[1]["speed"]);
 
                     // Previous path data given to the Planner

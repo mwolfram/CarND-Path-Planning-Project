@@ -37,10 +37,8 @@ Waypoints::Waypoints(const Waypoints &other):
 }
 
 void Waypoints::readFromFile() {
-    // Waypoint map to read from
-    string map_file = "data/highway_map.csv";
 
-    std::ifstream in_map(map_file.c_str(), std::ifstream::in);
+    std::ifstream in_map(toolkit::MAP_FILE.c_str(), std::ifstream::in);
 
     string line;
     while (getline(in_map, line)) {
@@ -66,17 +64,16 @@ void Waypoints::transformToCarFrame(const Car& self, Waypoints &transformed_wayp
         double wp_x = it->getX();
         double wp_y = it->getY();
         transform::toCarFrame(wp_x, wp_y, self.x_, self.y_, self.yaw_rad_);
-        transformed_waypoints.add(Waypoint(wp_x, wp_y, it->getS(), it->getDX(), it->getY())); // TODO check if it's ok to take these values from previous waypoint or if we have to transform them too
+        transformed_waypoints.add(Waypoint(wp_x, wp_y, it->getS(), it->getDX(), it->getY()));
     }
 }
 
-// TODO duplicate code
 void Waypoints::transformToMapFrame(const Car& self, Waypoints &transformed_waypoints) const {
     for (auto it = waypoints_.begin(); it != waypoints_.end(); it++) {
         double wp_x = it->getX();
         double wp_y = it->getY();
         transform::toMapFrame(wp_x, wp_y, self.x_, self.y_, self.yaw_rad_);
-        transformed_waypoints.add(Waypoint(wp_x, wp_y, it->getS(), it->getDX(), it->getY())); // TODO check if it's ok to take these values from previous waypoint or if we have to transform them too
+        transformed_waypoints.add(Waypoint(wp_x, wp_y, it->getS(), it->getDX(), it->getY()));
     }
 }
 

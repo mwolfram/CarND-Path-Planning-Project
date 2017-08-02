@@ -2,18 +2,26 @@
 
 #include <iostream>
 #include "INIReader.h"
+#include "toolkit.hpp"
 
-Configuration::Configuration(const std::string& configuration_file) {
-    configuration_file_ = configuration_file;
+Configuration::Configuration() :
+    Configuration(toolkit::CONFIG_FILE)
+{
 }
 
-void Configuration::read() {
-    INIReader reader(configuration_file_);
+Configuration::Configuration(const std::string &configuration_file) :
+    configuration_file_(configuration_file),
+    reader_(configuration_file)
+{
+    refresh();
+}
 
-    if (reader.ParseError() < 0) {
-        std::cout << "Can't load " << configuration_file_ << std::endl;
+void Configuration::refresh() {
+    reader_ = INIReader(configuration_file_);
+
+    if (reader_.ParseError() < 0) {
+        std::cout << "Configuration: Can't load " << configuration_file_ << std::endl;
         return;
     }
-    std::cout << reader.Get("testsection", "testentry", "notfound") << std::endl;
 }
 

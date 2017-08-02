@@ -6,6 +6,6 @@
 TEST_CASE( "Configuration is loaded", "[configuration]" ) {
 
     Configuration configuration("configuration/test.ini");
-    configuration.read();
+    configuration.refresh();
 
 }
