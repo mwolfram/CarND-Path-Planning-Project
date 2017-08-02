@@ -26,6 +26,7 @@ public:
     inline const double getToleratedAcceleration() { return reader_.GetReal(SECTION_DRIVING, "tolerated_acceleration", 0.08); } // TODO deprecated
     inline const int getPathLength() { return reader_.GetInteger(SECTION_DRIVING, "path_length", 30); }
     inline const int getAmountOfFutureWaypoints() { return reader_.GetInteger(SECTION_DRIVING, "amount_of_future_waypoints", 10); }
+    inline const double getStepsPerWaypoint() { return reader_.GetReal(SECTION_DRIVING, "steps_per_waypoint", 50.0); }
 
     // behavior
     inline const double getVelocityForLaneChange() { return reader_.GetReal(SECTION_BEHAVIOR, "vel_lane_change", 0.4); }

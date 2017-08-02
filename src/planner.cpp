@@ -79,26 +79,11 @@ void Planner::getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path)
     pose_at_end_of_path.yaw_rad_ = atan2(last_position_y-intermediate_position_y, last_position_x-intermediate_position_x);
 }
 
-void Planner::offset(const Waypoints& waypoints_to_manipulate, const Waypoints& reference_waypoints, const double& requested_d, Waypoints& offset_waypoints) const {
+void Planner::setD(const Waypoints& waypoints_to_manipulate, const Waypoints& reference_waypoints, const double& requested_d, Waypoints& offset_waypoints) const {
 
-    // configuration
-    INIReader ini("configuration/default.ini");
-
-    // TODO start at +1 waypoint (but maybe do this somewhere else)
-    for (auto it = waypoints_to_manipulate.getWaypoints().begin()+1; it != waypoints_to_manipulate.getWaypoints().end(); it++) {
+    for (auto it = waypoints_to_manipulate.getWaypoints().begin(); it != waypoints_to_manipulate.getWaypoints().end(); it++) {
 
         std::vector<double> xy_coordinates = conversion::toXY(it->getS(), requested_d, reference_waypoints);
-
-        /* TODO remove
-        // well, the distance should not be huge, so check this:
-        double distance = toolkit::distance(xy_coordinates[0], xy_coordinates[1], it->getX(), it->getY());
-        if (distance > 100.0) {
-            std::cout << "exceeded distance" << std::endl;
-
-            //repeat, so we can step through
-            conversion::toXY(it->getS(), requested_d, reference_waypoints);
-        }
-        */
 
         Waypoint offset_waypoint(
                     xy_coordinates[0],
@@ -120,8 +105,8 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     const double tolerated_acceleration = configuration.getToleratedAcceleration();
     const unsigned int desired_path_length = configuration.getPathLength();
     const unsigned int amount_of_future_waypoints = configuration.getAmountOfFutureWaypoints();
+    const double steps_per_waypoint = configuration.getStepsPerWaypoint();
     // configuration ends here
-
 
     const unsigned int previous_path_size = state.previous_path_.path_x_.size();
 
@@ -130,8 +115,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     // this could be the car itself, or something close to the end of the old path
     Waypoints existing_waypoints;
 
-    bool use_old_path = previous_path_size > 2; // TODO this as parameter, how much to reuse
-    //std::cout << "use old path: " << use_old_path << std::endl;
+    bool use_old_path = previous_path_size > 2;
     if (use_old_path) {
         existing_waypoints.addAll(state.previous_path_);
         getPoseAtEndOfPath(state.previous_path_, current_pose);
@@ -142,19 +126,16 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
         existing_waypoints.add(Waypoint(current_pose.x_, current_pose.y_, current_pose.s_, 0.0, 0.0));
     }
 
-    // Now to the NEW part of the path. Note: at this point the existing_waypoints could be size 1 or larger
-
     //
     // Add future waypoints
     //
 
-    // now add future waypoints, and offset them
-    // current car was the end of the previous path
     Waypoints future_waypoints;
     waypoints.getNextWaypoints(current_pose, amount_of_future_waypoints, future_waypoints);
 
+    // TODO start at +1 waypoint
     Waypoints offset_future_waypoints;
-    offset(future_waypoints, waypoints, requested_d, offset_future_waypoints);
+    setD(future_waypoints, waypoints, requested_d, offset_future_waypoints);
 
     Waypoints waypoints_for_spline;
     waypoints_for_spline.addAll(existing_waypoints);
@@ -181,7 +162,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     // Note: the first waypoint is never sampled, neither is the last
     // For smooth paths, the last waypoint of the previous path should be used as a start
     //
-    // ATTENTION: this is all happening in waypoints_for_spline frame!
+    // ATTENTION: this is all happening in car frame!
     //
 
     const unsigned int existing_waypoints_size = existing_waypoints.getWaypoints().size();
@@ -199,10 +180,6 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     double current_y = spline(current_x);
     double current_s = first_s;
 
-    //std::cout << "DEBUG RANGE AND STEP: " << std::endl;
-    //std::cout << "first_s " << first_s << std::endl;
-    //std::cout << "last_s " << last_s << std::endl;
-
     Waypoints sampled_transformed_waypoints;
 
     // adjust initial velocity
@@ -213,13 +190,9 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
         current_velocity_ -= acceleration;
     }
 
-    double increment_x = current_velocity_ / 50.0; // TODO parameters
+    double increment_x = current_velocity_ / steps_per_waypoint;
 
-    int iterations = 0; // TODO debug
     while (sampled_transformed_waypoints.getWaypoints().size() + previous_path_size < desired_path_length) {
-
-        ++iterations; // TODO debug
-
         double last_x = current_x;
         double last_y = current_y;
         current_x += increment_x;
@@ -234,10 +207,8 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
 
         if (s_since_last_wp > current_velocity_) {
             // push intermediate waypoint
-            sampled_transformed_waypoints.add(Waypoint(current_x, current_y, fmod(current_s, toolkit::maxS()), 0.0, 0.0)); // TODO ok that we leave dx dy empty?
+            sampled_transformed_waypoints.add(Waypoint(current_x, current_y, fmod(current_s, toolkit::maxS()), 0.0, 0.0));
             s_since_last_wp = 0.0;
-
-            //std::cout << "waypoint distance s: " << wp_distance_s << std::endl;
 
             // adjust velocity
             if (requested_velocity > current_velocity_) {
@@ -247,7 +218,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
                 current_velocity_ -= acceleration;
             }
 
-            increment_x = std::max(acceleration / 50.0, current_velocity_ / 50.0);
+            increment_x = std::max(acceleration / steps_per_waypoint, current_velocity_ / steps_per_waypoint);
         }
     }
 
@@ -260,13 +231,8 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
 
 
     //
-    // Take a fraction of the waypoints and set it as path in the command
+    // Convert waypoints to path that can be sent as a command
     //
-
-
-    // TODO GET RID OF THIS , this can't be true!
-    //Waypoints next_few_waypoints;
-    //sampled_waypoints.getNextWaypoints(current_pose, desired_path_length-previous_path_size, next_few_waypoints);
 
     Waypoints total_path_waypoints;
     total_path_waypoints.addAll(existing_waypoints);
@@ -280,12 +246,14 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     else {
         existing_waypoints.toPath(command.next_path_);
     }
-
-    //std::cout << "Old Path Sanity: " << checkPathSanity(existing_waypoints) << std::endl;
-    //std::cout << "Next Sanity: " << checkPathSanity(next_few_waypoints) << std::endl;
-    //std::cout << "Total Sanity: " <<  << std::endl;
 }
 
+/**
+ * @brief Planner::checkPathSanity checks that there are no significant jumps in acceleration
+ * @param waypoints
+ * @param tolerated_acceleration
+ * @return
+ */
 bool Planner::checkPathSanity(const Waypoints& waypoints, double tolerated_acceleration) const {
     for (auto i = 2; i < waypoints.getWaypoints().size(); i++) {
 

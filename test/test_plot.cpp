@@ -12,7 +12,6 @@ TEST_CASE( "Create sample a plot", "[sample-plot]" ) {
     svg::Line line(svg::Point(20, 20), svg::Point(200,200), svg::Stroke(20, svg::Color(255,0,0)));
     document << line;
     document.save();
-    // TODO assert
 }
 
 TEST_CASE( "Create a waypoint plot", "[waypoint-plot]" ) {
@@ -21,5 +20,4 @@ TEST_CASE( "Create a waypoint plot", "[waypoint-plot]" ) {
     waypoints.readFromFile();
     waypoints.plotWaypoints(document, svg::Color(255,0,0));
     document.save();
-    // TODO assert
 }

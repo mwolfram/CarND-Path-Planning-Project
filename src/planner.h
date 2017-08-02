@@ -29,7 +29,7 @@ public:
 
     bool checkPathSanity(const Waypoints& waypoints, double tolerated_acceleration) const;
     void getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path) const;
-    void offset(const Waypoints& waypoints_to_manipulate, const Waypoints& reference_waypoints, const double& requested_d, Waypoints& offset_waypoints) const;
+    void setD(const Waypoints& waypoints_to_manipulate, const Waypoints& reference_waypoints, const double& requested_d, Waypoints& offset_waypoints) const;
 
 private:
     void generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity);

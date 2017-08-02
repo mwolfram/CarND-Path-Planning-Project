@@ -161,7 +161,7 @@ void drawWaypointsAtOffset() {
 
     Planner planner;
     Waypoints offset_waypoints;
-    planner.offset(waypoints, waypoints, 20.0, offset_waypoints);
+    planner.setD(waypoints, waypoints, 20.0, offset_waypoints);
 
     offset_waypoints.plotWaypoints(document, svg::Color(255, 0, 0));
     document.save();
