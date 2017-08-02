@@ -11,6 +11,7 @@ set(sources
     src/planner.cpp
     src/configuration.cpp
     src/waypoint.cpp
+    src/state_machine.cpp
     )
 
 set(main-sources ${sources} src/main.cpp)

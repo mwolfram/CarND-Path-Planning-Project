@@ -5,6 +5,35 @@
 #include <math.h>
 #include <string>
 
+class InternalState {
+
+public:
+    InternalState(const double& velocity_limit,
+                  const double& current_velocity_,
+                  const double& requested_d) :
+        velocity_limit_(velocity_limit),
+        current_velocity_(current_velocity_),
+        requested_d_(requested_d)
+    {
+    }
+
+    // getters
+    double getVelocityLimit() const { return velocity_limit_; }
+    double getCurrentVelocity() const { return current_velocity_; }
+    double getRequestedD() const { return requested_d_; }
+
+    // setters
+    void setVelocityLimit(const double& velocity_limit) { velocity_limit_ = velocity_limit; }
+    void setCurrentVelocity(const double& current_velocity) { current_velocity_ = current_velocity; }
+    void setRequestedD(const double& requested_d) { requested_d_ = requested_d; }
+
+private:
+    double velocity_limit_;
+    double current_velocity_;
+    double requested_d_;
+
+};
+
 struct Path {
 
     // Path data given to the Planner

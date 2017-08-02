@@ -7,57 +7,9 @@
 #include "data.h"
 #include "simple_svg_1.0.0.hpp"
 
-
-namespace {
-
-    int dToLane(double d) {
-        double distance0 = fabs(d - 2.0);
-        double distance1 = fabs(d - 6.0);
-        double distance2 = fabs(d - 10.0);
-
-        int lane = 0;
-        double min_distance = 100000000.0; // TODO
-        if (distance0 < min_distance) {
-            lane = 0;
-            min_distance = distance0;
-        }
-        if (distance1 < min_distance) {
-            lane = 1;
-            min_distance = distance1;
-        }
-        if (distance2 < min_distance) {
-            lane = 2;
-            min_distance = distance2;
-        }
-
-        return lane;
-    }
-
-    double laneToD(int lane) {
-        if (lane == 0) {
-            return 2.2;
-        }
-        else if (lane == 1) {
-            return 6.0;
-        }
-        else if (lane == 2) {
-            return 9.8;
-        }
-        return 50.0; // TODO not nice, but shows if there is an error
-    }
-
-}
-
 Planner::Planner():
-    plot_("plot.svg",
-         svg::Layout( svg::Dimensions(6000, 8000),
-                      svg::Layout::Origin::BottomLeft,
-                      1,
-                      svg::Point(3000, 4000))),
-    behaviour_(KEEP_LANE),
-    requested_d(6.0)
+    internal_state_(InternalState(0.43, 0.0, 6.0))
 {
-    plot::plotAxes(plot_);
 }
 
 void Planner::getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path) const {
@@ -96,8 +48,9 @@ void Planner::setD(const Waypoints& waypoints_to_manipulate, const Waypoints& re
     }
 }
 
-// TODO get rid of requested fields, just pass a PlanningSettings
-void Planner::generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, double requested_velocity) {
+InternalState Planner::generateTrajectory(const Waypoints& waypoints, const State& state, Command& command, const InternalState& internal_state_in) const {
+
+    InternalState internal_state = internal_state_in;
 
     // configuration
     Configuration configuration;
@@ -122,7 +75,7 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     }
     else {
         current_pose = state.self_;
-        current_velocity_ = state.self_.speed_mps_ * toolkit::rate();
+        internal_state.setCurrentVelocity(state.self_.speed_mps_ * toolkit::rate());
         existing_waypoints.add(Waypoint(current_pose.x_, current_pose.y_, current_pose.s_, 0.0, 0.0));
     }
 
@@ -133,9 +86,13 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     Waypoints future_waypoints;
     waypoints.getNextWaypoints(current_pose, amount_of_future_waypoints, future_waypoints);
 
-    // TODO start at +1 waypoint
+    // TODO we can change this to get different behaviors for lane changes
+    Waypoints future_waypoints_with_first_omitted;
+    future_waypoints.getSubset(1, future_waypoints_with_first_omitted);
+
     Waypoints offset_future_waypoints;
-    setD(future_waypoints, waypoints, requested_d, offset_future_waypoints);
+    //TODO use this: setD(future_waypoints_with_first_omitted, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
+    setD(future_waypoints, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
 
     Waypoints waypoints_for_spline;
     waypoints_for_spline.addAll(existing_waypoints);
@@ -183,14 +140,14 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     Waypoints sampled_transformed_waypoints;
 
     // adjust initial velocity
-    if (requested_velocity > current_velocity_) {
-        current_velocity_ += acceleration;
+    if (internal_state.getVelocityLimit() > internal_state.getCurrentVelocity()) {
+        internal_state.setCurrentVelocity(internal_state.getCurrentVelocity() + acceleration);
     }
-    else if (requested_velocity < current_velocity_) {
-        current_velocity_ -= acceleration;
+    else if (internal_state.getVelocityLimit() < internal_state.getCurrentVelocity()) {
+        internal_state.setCurrentVelocity(internal_state.getCurrentVelocity() - acceleration);
     }
 
-    double increment_x = current_velocity_ / steps_per_waypoint;
+    double increment_x = internal_state.getCurrentVelocity() / steps_per_waypoint;
 
     while (sampled_transformed_waypoints.getWaypoints().size() + previous_path_size < desired_path_length) {
         double last_x = current_x;
@@ -205,20 +162,20 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
             break;
         }
 
-        if (s_since_last_wp > current_velocity_) {
+        if (s_since_last_wp > internal_state.getCurrentVelocity()) {
             // push intermediate waypoint
             sampled_transformed_waypoints.add(Waypoint(current_x, current_y, fmod(current_s, toolkit::maxS()), 0.0, 0.0));
             s_since_last_wp = 0.0;
 
             // adjust velocity
-            if (requested_velocity > current_velocity_) {
-                current_velocity_ += acceleration;
+            if (internal_state.getVelocityLimit() > internal_state.getCurrentVelocity()) {
+                internal_state.setCurrentVelocity(internal_state.getCurrentVelocity() + acceleration);
             }
-            else if (requested_velocity < current_velocity_) {
-                current_velocity_ -= acceleration;
+            else if (internal_state.getVelocityLimit() < internal_state.getCurrentVelocity()) {
+                internal_state.setCurrentVelocity(internal_state.getCurrentVelocity() - acceleration);
             }
 
-            increment_x = std::max(acceleration / steps_per_waypoint, current_velocity_ / steps_per_waypoint);
+            increment_x = std::max(acceleration / steps_per_waypoint, internal_state.getCurrentVelocity() / steps_per_waypoint);
         }
     }
 
@@ -246,6 +203,8 @@ void Planner::generateTrajectory(const Waypoints& waypoints, const State& state,
     else {
         existing_waypoints.toPath(command.next_path_);
     }
+
+    return internal_state;
 }
 
 /**
@@ -273,26 +232,17 @@ bool Planner::checkPathSanity(const Waypoints& waypoints, double tolerated_accel
     return true;
 }
 
-// TODO cleanup
-void Planner::planBehavior(State state, double& requested_velocity) {
+InternalState Planner::limitVelocity(State state, const InternalState& internal_state_in) const {
+
+    InternalState internal_state = internal_state_in;
 
     Configuration configuration; // ATTENTION! TODO this is read multiple times!
-    double vel_lane_change = configuration.getVelocityForLaneChange();
     const double s_lookahead = configuration.getLookaheadInS();
     const double s_too_close = configuration.getTooCloseDistanceInS();
     const double lane_width = configuration.getLaneWidthToConsider();
-
+    const double drive_slower_before_colliding_factor = configuration.getDriveSlowerBeforeCollidingFactor();
 
     const Car& self = state.self_;
-
-    double drive_slower_before_colliding_factor = 0.75;
-
-    bool try_to_switch_lanes = false;
-
-    // Finished Lane Change
-    if (abs(requested_d-self.d_) < lane_width/2.0) {
-        behaviour_ = KEEP_LANE;
-    }
 
     // Check Velocity and whether we want to change lanes
     for (auto it = state.others_.begin(); it != state.others_.end(); it++) {
@@ -302,65 +252,35 @@ void Planner::planBehavior(State state, double& requested_velocity) {
 
         if (abs(self.d_ - other.d_) < lane_width ) {
             if (other.s_ > self.s_ && other.s_ - self.s_ < s_lookahead) {
-                requested_velocity = std::min(requested_velocity, toolkit::distance(0, 0, other.vx_, other.vy_) * toolkit::rate());
-                if (requested_velocity < vel_lane_change && behaviour_ != LANE_CHANGE) {
-                    try_to_switch_lanes = true;
-                }
+                internal_state.setVelocityLimit(std::min(internal_state.getVelocityLimit(), toolkit::distance(0, 0, other.vx_, other.vy_) * toolkit::rate()));
             }
 
             if (other.s_ > self.s_ && other.s_ - self.s_ < s_too_close) {
-                requested_velocity = std::min(requested_velocity, toolkit::distance(0, 0, other.vx_, other.vy_) * toolkit::rate() * drive_slower_before_colliding_factor);
-                if (requested_velocity < vel_lane_change  && behaviour_ != LANE_CHANGE) {
-                    try_to_switch_lanes = true;
-                }
+                internal_state.setVelocityLimit(std::min(internal_state.getVelocityLimit(), toolkit::distance(0, 0, other.vx_, other.vy_) * toolkit::rate() * drive_slower_before_colliding_factor));
             }
         }
-
         std::cout << danger << "      " << other.s_ << " " << other.d_ << std::endl;
-
-
     }
 
-    if (try_to_switch_lanes) {
+    std::cout << "Limiter: Setting requested velocity to " << internal_state.getVelocityLimit() << std::endl;
 
-        int my_lane = dToLane(self.d_);
-
-        // TODO check if the other lanes are actually free
-
-        int target_lane = my_lane - 1;
-        if (my_lane == 0) {
-            target_lane = 1;
-        }
-
-        requested_d = laneToD(target_lane);
-        behaviour_ = LANE_CHANGE;
-        // implement the lane switch here
-    }
-
-
-    std::cout << "Setting requested velocity to " << requested_velocity << " and the requested d to " << requested_d << std::endl;
-    std::cout << "---------------------------------" << std::endl;
-
-    //if we are in the desired lane, which is the center of the lane +/- X,
-    // --> KEEP_LANE
-
-    //else if car in front and slow.
-
-    // can we change left/right?
-    // do we have more space forward there?
-
-
-
+    return internal_state;
 }
 
-// TODO cleanup
 void Planner::plan(const Waypoints& waypoints, const State& state, Command& command) {
 
+    // configuration that is refreshed for each iteration
     Configuration configuration;
-    double requested_velocity = configuration.getRequestedVelocity();
+    internal_state_.setVelocityLimit(configuration.getVelocityLimit());
 
-    planBehavior(state, requested_velocity);
+    // velocity limiter
+    internal_state_ = limitVelocity(state, internal_state_);
 
-    generateTrajectory(waypoints, state, command, requested_velocity);
+    // state machine
+    // TODO currently we call this second because we need the results from the limiter. If we can call the limiter offline, we can state-machine first.
+    internal_state_ = state_machine_.step(state, internal_state_, configuration);
+
+    // trajectory generator
+    internal_state_ = generateTrajectory(waypoints, state, command, internal_state_);
 }
 
