@@ -23,11 +23,12 @@ public:
     // driving
     inline const double getVelocityLimit() { return reader_.GetReal(SECTION_DRIVING, "velocity_limit", 0.43); }
     inline const double getAcceleration() { return reader_.GetReal(SECTION_DRIVING, "acceleration", 0.0015); }
-    inline const double getToleratedAcceleration() { return reader_.GetReal(SECTION_DRIVING, "tolerated_acceleration", 0.08); } // TODO deprecated?
+    inline const double getToleratedAcceleration() { return reader_.GetReal(SECTION_DRIVING, "tolerated_acceleration", 0.08); }
     inline const int getPathLength() { return reader_.GetInteger(SECTION_DRIVING, "path_length", 30); }
     inline const int getAmountOfFutureWaypoints() { return reader_.GetInteger(SECTION_DRIVING, "amount_of_future_waypoints", 10); }
     inline const double getStepsPerWaypoint() { return reader_.GetReal(SECTION_DRIVING, "steps_per_waypoint", 50.0); }
     inline const double getInLaneTolerance() { return reader_.GetReal(SECTION_DRIVING, "in_lane_tolerance", 0.4); }
+    inline const double getOmitFutureWaypointDistance() { return reader_.GetReal(SECTION_DRIVING, "omit_future_waypoint_distance", 7.0); }
 
     // behavior
     inline const double getVelocityForLaneChange() { return reader_.GetReal(SECTION_BEHAVIOR, "vel_lane_change", 0.4); }

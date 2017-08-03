@@ -109,9 +109,17 @@ InternalState Planner::generateTrajectory(const Waypoints& waypoints, const Stat
         //std::cout << "Trajectory Generator: [ CHANGING LANE ], d: " << state.self_.d_ << ", lane_d: " << internal_state.getRequestedD() << std::endl;
     }
     else {
-        // driving in lane, we can follow all waypoints
-        setD(future_waypoints, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
-        //std::cout << "Trajectory Generator: [--> IN LANE <--], d: " << state.self_.d_ << ", lane_d: " << internal_state.getRequestedD() << std::endl;
+        double future_waypoint_distance = fabs(future_waypoints.getWaypoints()[0].getS() - state.self_.s_);
+
+        if (future_waypoint_distance < configuration.getOmitFutureWaypointDistance()) {
+            // we are too close to the next waypoint, better leave it out
+            setD(future_waypoints_with_first_omitted, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
+        }
+        else {
+            // driving in lane, we can follow all waypoints
+            setD(future_waypoints, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
+            //std::cout << "Trajectory Generator: [--> IN LANE <--], d: " << state.self_.d_ << ", lane_d: " << internal_state.getRequestedD() << std::endl;
+        }
     }
 
     Waypoints waypoints_for_spline;
@@ -297,7 +305,6 @@ void Planner::plan(const Waypoints& waypoints, const State& state, Command& comm
     internal_state_ = limitVelocity(state, internal_state_);
 
     // state machine
-    // TODO currently we call this second because we need the results from the limiter. If we can call the limiter offline, we can state-machine first.
     internal_state_ = state_machine_.step(state, internal_state_, configuration);
 
     // trajectory generator
