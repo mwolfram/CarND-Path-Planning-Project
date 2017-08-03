@@ -98,7 +98,7 @@ InternalState Planner::generateTrajectory(const Waypoints& waypoints, const Stat
     Waypoints future_waypoints;
     waypoints.getNextWaypoints(current_pose, amount_of_future_waypoints, future_waypoints);
 
-    // TODO we can change this to get different behaviors for lane changes
+    // we can change this to get different behaviors for lane changes
     Waypoints future_waypoints_with_first_omitted;
     future_waypoints.getSubset(1, future_waypoints_with_first_omitted);
 

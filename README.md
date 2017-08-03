@@ -203,7 +203,7 @@ The only things left to do are transforming the waypoints back to world coordina
 
 ### Switching lanes
 
-# TODO and do not forget the waypoint omitting
+For switching lanes, the d value of the next waypoint is changed (and of all waypoints after that), and then those new waypoints are fed to the spline calculation. In case the waypoint is too close, or when we are changing lanes, the first waypoint is omitted. This leads to smoother results.
 
 ## Speed limitation
 
@@ -224,19 +224,11 @@ enum Node {
 };
 ```
 
-When in ```KEEP_LANE```, the car will monitor whether its speed is limited by traffic in front. If it is, it will try to find a better lane. For calculating traffic situations, the current state is simulated by a certain timestep. This timestep is determined by multiplying the expected distance necessary to change lanes by the car's current velocity. The most promising lane is chosen. If a lane change is necessary, a transition to ```CHANGE_LANE``` is carried out.
+When in ```KEEP_LANE```, the car will monitor whether its speed is limited by traffic in front. If it is, it will try to find a better lane. For calculating traffic situations, the current state is simulated by a certain timestep. This timestep can be set via parameter. The most promising lane is chosen. If a lane change is necessary, a transition to ```CHANGE_LANE``` is carried out. Also, there is a threshold determining whether a lane change makes sense at all. It only makes sense if it gives us a big advantage. However, the third lane is also taken into account (where applicable). If that looks promising, a change to the center lane is carried out nevertheless.
 
 When in ```CHANGE_LANE```, the car will monitor whether the requested d value (center of the lane or close to it) is reached. Once this is the case, the state machine steps back to ```KEEP_LANE```.
 
 The state machine is implemented in ```src/state_machine.cpp```, the state transitions happen in ```StateMachine::step```
-
-## TODO
-
-* missing: when the other lane is also limited, prefer it if the lane after that seems ok.
-
-* "timestep is determined by multiplying the expected distance necessary to change lanes by the car's current velocity. " is that really a good idea? lane change time should actually be constant!
-
-* image of plot
 
 ## Helpers
 
@@ -253,6 +245,10 @@ The ```CMakeLists.txt``` will build 3 executables, the main class for the projec
 ### Plotting
 
 I chose a header-only SVG library, in combination with a file monitor to get a handy way of plotting data. This was helpful in waypoint manipulation and trajectory generation. The library is contained in ```simple_svg_1.0.0.hpp```
+
+An example is shown below, it contains all the waypoints, and the waypoints offset by a certain d value:
+
+![Track Waypoints](track.png)
 
 ### Configuration
 
