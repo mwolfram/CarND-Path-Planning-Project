@@ -139,23 +139,25 @@ still be compilable with cmake and make./
 
 There are several classes/structs for representing complex data in the system. They are contained in ```src/data.h```, as well as ```src/waypoint.cpp and .h```
 
-* InternalState
+### data.h
 
-* Path
+* **InternalState**: Internal cache to store the velocity, requested d value, etc.
 
-* State
+* **Path**: Path as received from and communicated to the simulator
 
-* OtherCar
+* **State**: A collection of all relevant data that defines the world's state: Path received, self and other cars.
 
-* Simulating State, Self and Other Cars
+* **Car**: Representation of the own car, as it is received from the localization module.
 
-* Car
+* **OtherCar**: Representation of other cars as perceived from sensor fusion
 
-* Path
+* **Simulating State, Self and Other Cars**: The ```State``` struct can be simulated by a given timestep.
 
-* Waypoint
+### waypoint.h and waypoint.cpp
 
-* Waypoints
+* **Waypoint**: Represents a single waypoint
+
+* **Waypoints**: Contains a collection of waypoints and offers several methods for manipulating them.
 
 ## Trajectory Generation
 
