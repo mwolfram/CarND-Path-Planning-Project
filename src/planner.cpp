@@ -12,6 +12,11 @@ Planner::Planner():
 {
 }
 
+/**
+ * @brief Planner::getPoseAtEndOfPath returns position and orientation of the last point of the path
+ * @param old_path
+ * @param pose_at_end_of_path
+ */
 void Planner::getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path) const {
 
     const unsigned int path_size = old_path.path_x_.size();
@@ -31,6 +36,13 @@ void Planner::getPoseAtEndOfPath(const Path& old_path, Car& pose_at_end_of_path)
     pose_at_end_of_path.yaw_rad_ = atan2(last_position_y-intermediate_position_y, last_position_x-intermediate_position_x);
 }
 
+/**
+ * @brief Planner::setD sets the d value for a set of waypoints
+ * @param waypoints_to_manipulate these are the waypoints where the d value will be set
+ * @param reference_waypoints these are reference waypoints for calculating d (the initial set of waypoints)
+ * @param requested_d the d value that will be set
+ * @param offset_waypoints the resulting waypoints, with the d value set
+ */
 void Planner::setD(const Waypoints& waypoints_to_manipulate, const Waypoints& reference_waypoints, const double& requested_d, Waypoints& offset_waypoints) const {
 
     for (auto it = waypoints_to_manipulate.getWaypoints().begin(); it != waypoints_to_manipulate.getWaypoints().end(); it++) {
@@ -91,8 +103,16 @@ InternalState Planner::generateTrajectory(const Waypoints& waypoints, const Stat
     future_waypoints.getSubset(1, future_waypoints_with_first_omitted);
 
     Waypoints offset_future_waypoints;
-    /*TODO use this:*/ setD(future_waypoints_with_first_omitted, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
-    //setD(future_waypoints, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
+    if (fabs(state.self_.d_ - internal_state.getRequestedD()) > configuration.getInLaneTolerance()) {
+        // it seems like we are switching lanes, omit the first waypoint
+        setD(future_waypoints_with_first_omitted, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
+        //std::cout << "Trajectory Generator: [ CHANGING LANE ], d: " << state.self_.d_ << ", lane_d: " << internal_state.getRequestedD() << std::endl;
+    }
+    else {
+        // driving in lane, we can follow all waypoints
+        setD(future_waypoints, waypoints, internal_state.getRequestedD(), offset_future_waypoints);
+        //std::cout << "Trajectory Generator: [--> IN LANE <--], d: " << state.self_.d_ << ", lane_d: " << internal_state.getRequestedD() << std::endl;
+    }
 
     Waypoints waypoints_for_spline;
     waypoints_for_spline.addAll(existing_waypoints);
@@ -250,7 +270,7 @@ InternalState Planner::limitVelocity(State state, const InternalState& internal_
 
         std::string danger = other.renderDistance(self.s_);
 
-        if (abs(self.d_ - other.d_) < lane_width ) {
+        if (fabs(self.d_ - other.d_) < lane_width ) {
             if (other.s_ > self.s_ && other.s_ - self.s_ < s_lookahead) {
                 internal_state.setVelocityLimit(std::min(internal_state.getVelocityLimit(), toolkit::distance(0, 0, other.vx_, other.vy_) * toolkit::rate()));
             }
@@ -259,10 +279,10 @@ InternalState Planner::limitVelocity(State state, const InternalState& internal_
                 internal_state.setVelocityLimit(std::min(internal_state.getVelocityLimit(), toolkit::distance(0, 0, other.vx_, other.vy_) * toolkit::rate() * drive_slower_before_colliding_factor));
             }
         }
-        std::cout << danger << "      " << other.s_ << " " << other.d_ << std::endl;
+        //std::cout << danger << "      " << other.s_ << " " << other.d_ << std::endl;
     }
 
-    std::cout << "Limiter: Setting requested velocity to " << internal_state.getVelocityLimit() << std::endl;
+    //std::cout << "Limiter: Setting requested velocity to " << internal_state.getVelocityLimit() << std::endl;
 
     return internal_state;
 }

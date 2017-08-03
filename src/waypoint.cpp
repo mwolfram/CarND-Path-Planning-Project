@@ -196,7 +196,7 @@ int Waypoints::getNextWaypointIndex(const double& self_x, const double& self_y, 
     double wp_x = closestWaypoint.getX();
     double wp_y = closestWaypoint.getY();
     double heading = atan2( (wp_y-self_y),(wp_x-self_x) );
-    double angle = abs(self_yaw_rad-heading);
+    double angle = fabs(self_yaw_rad-heading);
 
     if(angle > toolkit::pi()/4) {
         closestWaypointIndex++;

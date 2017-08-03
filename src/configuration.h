@@ -27,12 +27,15 @@ public:
     inline const int getPathLength() { return reader_.GetInteger(SECTION_DRIVING, "path_length", 30); }
     inline const int getAmountOfFutureWaypoints() { return reader_.GetInteger(SECTION_DRIVING, "amount_of_future_waypoints", 10); }
     inline const double getStepsPerWaypoint() { return reader_.GetReal(SECTION_DRIVING, "steps_per_waypoint", 50.0); }
+    inline const double getInLaneTolerance() { return reader_.GetReal(SECTION_DRIVING, "in_lane_tolerance", 0.4); }
 
     // behavior
     inline const double getVelocityForLaneChange() { return reader_.GetReal(SECTION_BEHAVIOR, "vel_lane_change", 0.4); }
     inline const double getLaneFreeForward() { return reader_.GetReal(SECTION_BEHAVIOR, "lane_free_forward", 20.0); }
     inline const double getLaneFreeBackward() { return reader_.GetReal(SECTION_BEHAVIOR, "lane_free_backward", 20.0); }
-    inline const double getLaneSwitchDistance() { return reader_.GetReal(SECTION_BEHAVIOR, "lane_switch_distance", 30.0); }
+    inline const double getLaneSwitchSimTime() { return reader_.GetReal(SECTION_BEHAVIOR, "lane_switch_sim_time", 5.0); }
+    inline const double getAdvantageForLaneChange() { return reader_.GetReal(SECTION_BEHAVIOR, "advantage_for_lane_change", 20.0); }
+    inline const double getAdvantageForPreparingLaneChange() { return reader_.GetReal(SECTION_BEHAVIOR, "advantage_for_preparing_lane_change", 40.0); }
 
     // safety
     inline const double getLookaheadInS() { return reader_.GetReal(SECTION_SAFETY, "s_lookahead", 30.0); }

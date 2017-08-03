@@ -67,6 +67,7 @@ struct OtherCar {
         simulated_car.x_ += vx_ * dt;
         simulated_car.y_ += vy_ * dt;
         simulated_car.s_ += sqrt(vx_*vx_+vy_*vy_) * dt;
+        return simulated_car;
     }
 
     std::string renderDistance(double self_s) const {
@@ -126,6 +127,8 @@ struct Car {
         simulated_car.y_ += speed_mps_ * dt * sin(yaw_rad_);
         simulated_car.s_ += speed_mps_ * dt;
         // TODO never setting d, yaw_rad, speed
+
+        return simulated_car;
     }
 };
 
@@ -136,14 +139,14 @@ struct State {
     std::vector<OtherCar> others_;
 
     State simulate(double dt) {
-        State simulated_state = *this;
+        State simulated_state;
 
-        simulated_state.others_.clear();
         for (auto it = others_.begin(); it != others_.end(); it++) {
             simulated_state.others_.push_back(it->simulate(dt));
         }
 
         simulated_state.self_ = self_.simulate(dt);
+        return simulated_state;
     }
 
 };
