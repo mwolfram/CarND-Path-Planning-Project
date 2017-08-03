@@ -141,11 +141,13 @@ There are several classes/structs for representing complex data in the system. T
 
 * InternalState
 
-* State
-
 * Path
 
+* State
+
 * OtherCar
+
+* Simulating State, Self and Other Cars
 
 * Car
 
@@ -171,7 +173,7 @@ The last bit of the old path is concatenated with a set of waypoints that are in
 
 ### Calculating a spline
 
-For calculating the spline, the points have to be transformed to "car" frame. It's written in quotes, because we will end up getting something close to the car frame (coordinate system), but what is actually done is the following:
+For calculating the spline, the points have to be transformed to "car" frame. It's written in quotes, because while we will end up getting something close to the car frame (coordinate system), what is actually done is the following:
 
 * The first waypoint is taken as positiono.
 * The direction between the first and last waypoint is taken as orientation.
@@ -182,18 +184,51 @@ For calculating the spline, the points have to be transformed to "car" frame. It
 
 This transformation is necessary because the spline calculation library expects the X values to be sorted (in a strict ascending order).
 
-### 
+### Sampling from the spline
 
+The resulting spline cannot be used directly as a command to the simulator, so waypoints have to be sampled from it. The procedure for this is the following:
+
+* Start at the X value of the first waypoint
+* In very small steps, increase X, calculate Y from the spline and add the distance travelled to S.
+* As soon as we have travelled enough, S-wise, create a new waypoint.
+* Rinse and repeat until a certain amount of waypoints is available.
+
+This process makes sure th can control the distance between waypoints, no matter if we are in a curve or on a straight section of the road. This is also important when changing lanes.
+
+### Transforming back and setting command
+
+The only things left to do are transforming the waypoints back to world coordinates, concatenating old path and new path, and setting the complete set of waypoints as a command to the simulator.
+
+## Speed limitation
+
+Speed limitation is performed in ```Planner::limitVelocity```. All other cars on the road are checked for their s and d values. If they are closer than a certain threshold and in front of us, we adjust our speed to theirs. If we are too close, we multiply our speed by a certain factor to establish more distance.
+
+## State Machine
+
+A simple state machine is used for deciding on future actions. There is a combination of two nodes (state machine states) and three lanes:
+
+```cpp
+enum Lane {
+    LEFT, CENTER, RIGHT
+};
+
+enum Node {
+    KEEP_LANE,
+    CHANGE_LANE
+};
+```
+
+When in ```KEEP_LANE```, the car will monitor whether its speed is limited by traffic in front. If it is, it will try to find a better lane. For calculating traffic situations, the current state is simulated by a certain timestep. This timestep is determined by multiplying the expected distance necessary to change lanes by the car's current velocity. The most promising lane is chosen. If a lane change is necessary, a transition to ```CHANGE_LANE``` is carried out.
+
+When in ```CHANGE_LANE```, the car will monitor whether the requested d value (center of the lane or close to it) is reached. Once this is the case, the state machine steps back to ```KEEP_LANE```.
+
+The state machine is implemented in ```src/state_machine.cpp```, the state transitions happen in ```StateMachine::step```
 
 ## TODO
 
-* Planner (path generation) spline, transform , omitting waypoints, connecting with old path, velocity limit, path sampling (sampling resolution), error in toXY
+* missing: when the other lane is also limited, prefer it if the lane after that seems ok.
 
-* State Machine, states and lanes,
-
-* data.h forward simulation,
-
-* waypoint class
+* "timestep is determined by multiplying the expected distance necessary to change lanes by the car's current velocity. " is that really a good idea? lane change time should actually be constant!
 
 * image of plot
 
