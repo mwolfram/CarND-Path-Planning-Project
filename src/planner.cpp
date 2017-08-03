@@ -267,7 +267,7 @@ InternalState Planner::limitVelocity(State state, const InternalState& internal_
 
     InternalState internal_state = internal_state_in;
 
-    Configuration configuration; // ATTENTION! TODO this is read multiple times!
+    Configuration configuration;
     const double s_lookahead = configuration.getLookaheadInS();
     const double s_too_close = configuration.getTooCloseDistanceInS();
     const double lane_width = configuration.getLaneWidthToConsider();

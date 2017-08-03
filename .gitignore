@@ -1,2 +1,9 @@
 CMakeLists.txt.user
 *.svg
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+path_planning
+path_planning_debug
+path_planning_test
