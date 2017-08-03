@@ -110,6 +110,9 @@ InternalState Planner::generateTrajectory(const Waypoints& waypoints, const Stat
     }
     else {
         double future_waypoint_distance = fabs(future_waypoints.getWaypoints()[0].getS() - state.self_.s_);
+        if (state.self_.s_ > toolkit::maxS() * 0.75 && future_waypoints.getWaypoints()[0].getS() < toolkit::maxS() * 0.25) {
+            future_waypoint_distance = fabs(future_waypoints.getWaypoints()[0].getS() + toolkit::maxS() - state.self_.s_);
+        }
 
         if (future_waypoint_distance < configuration.getOmitFutureWaypointDistance()) {
             // we are too close to the next waypoint, better leave it out

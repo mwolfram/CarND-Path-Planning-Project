@@ -201,6 +201,10 @@ This process makes sure th can control the distance between waypoints, no matter
 
 The only things left to do are transforming the waypoints back to world coordinates, concatenating old path and new path, and setting the complete set of waypoints as a command to the simulator.
 
+### Switching lanes
+
+# TODO and do not forget the waypoint omitting
+
 ## Speed limitation
 
 Speed limitation is performed in ```Planner::limitVelocity```. All other cars on the road are checked for their s and d values. If they are closer than a certain threshold and in front of us, we adjust our speed to theirs. If we are too close, we multiply our speed by a certain factor to establish more distance.
