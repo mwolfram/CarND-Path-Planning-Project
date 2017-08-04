@@ -8,6 +8,7 @@
 #include "data.h"
 #include "toolkit.hpp"
 #include "waypoint.h"
+#include "configuration.h"
 
 using namespace std;
 
@@ -30,6 +31,14 @@ string hasData(string s) {
 }
 
 int main() {
+
+    // Check if we can access the configuration file
+    Configuration configuration;
+    if (!configuration.refresh()) {
+        std::cout << "Exiting because configuration file cannot be found!" << std::endl;
+        exit(-1);
+    }
+
     uWS::Hub h;
 
     // Load up map values for waypoint's x,y,s and d normalized normal vectors

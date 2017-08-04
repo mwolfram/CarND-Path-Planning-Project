@@ -18,7 +18,7 @@ public:
     Configuration(const std::string& configuration_file);
     ~Configuration(){}
 
-    void refresh();
+    bool refresh();
 
     // driving
     inline const double getVelocityLimit() { return reader_.GetReal(SECTION_DRIVING, "velocity_limit", 0.43); }

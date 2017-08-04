@@ -20,8 +20,8 @@ using std::string;
  */
 namespace toolkit {
 
-    const static std::string MAP_FILE = "data/highway_map.csv";
-    const static std::string CONFIG_FILE = "configuration/default.ini";
+    const static std::string MAP_FILE = "../data/highway_map.csv";
+    const static std::string CONFIG_FILE = "../configuration/default.ini";
 
     constexpr double pi() { return M_PI; }
     constexpr double mph2mpsFactor() { return 0.44704; }

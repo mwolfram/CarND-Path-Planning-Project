@@ -16,12 +16,14 @@ Configuration::Configuration(const std::string &configuration_file) :
     refresh();
 }
 
-void Configuration::refresh() {
+bool Configuration::refresh() {
     reader_ = INIReader(configuration_file_);
 
     if (reader_.ParseError() < 0) {
         std::cout << "Configuration: Can't load " << configuration_file_ << std::endl;
-        return;
+        return false;
     }
+
+    return true;
 }
 
